@@ -72,7 +72,7 @@ def read_ipe_file(filename):
 
 
 def main():
-    instance = 'instance_from_report'
+    instance = 'simplified_instance_from_report'
     graph, obstacles = read_ipe_file(f'{instance}.ipe')
     print(graph)
 

@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon, Circle
+from pathlib import Path
 
 
 def visualize_input(graph, obstacles, instance):
@@ -24,4 +25,6 @@ def visualize_input(graph, obstacles, instance):
 
     plt.axis('scaled')
     plt.axis('off')
+
+    Path('plots/input').mkdir(parents=True, exist_ok=True)
     plt.savefig(f'plots/input/{instance}.png', bbox_inches='tight')
