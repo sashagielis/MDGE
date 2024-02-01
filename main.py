@@ -3,6 +3,8 @@ import xml.etree.ElementTree as ET
 
 from graph import *
 from obstacle import *
+from utils import transform_point
+from visualizer import visualize_input
 
 
 def read_ipe_file(filename):
@@ -22,14 +24,14 @@ def read_ipe_file(filename):
             current_layer = obj.get('layer').casefold()
 
         if obj.get('matrix') is not None:
-            transform_matrix = [float(i) for i in obj.get('matrix').split()]
+            transformation = [float(i) for i in obj.get('matrix').split()]
         else:
-            transform_matrix = [1, 0, 0, 1, 0, 0]
+            transformation = [1, 0, 0, 1, 0, 0]
 
         match obj.tag:
             case 'use':
                 pos = [float(i) for i in obj.get('pos').split()]
-                x, y = transform(pos, transform_matrix)
+                x, y = transform_point(pos, transformation)
 
                 color = obj.get('stroke')
 
@@ -45,9 +47,8 @@ def read_ipe_file(filename):
                 path = []
                 for node_string in nodes_string.split('\n'):
                     coordinates = [float(i) for i in node_string.split()[:-1]]
-                    #print(coordinates)
                     pos = coordinates[-2], coordinates[-1]
-                    x, y = transform(pos, transform_matrix)
+                    x, y = transform_point(pos, transformation)
                     path.append([x, y])
 
                 if current_layer == 'graph':
@@ -59,7 +60,10 @@ def read_ipe_file(filename):
                     edge = Edge(path, weight, obj.get('stroke'))
                     edges.append(edge)
                 else:
-                    obstacle = Obstacle(path, obj.get('fill'))
+                    if len(path) > 1:
+                        path = path[:-1]
+
+                    obstacle = Obstacle(path, obj.get('fill'), obj.get('stroke'))
                     obstacles.append(obstacle)
 
     graph = Graph(vertices, edges)
@@ -67,24 +71,16 @@ def read_ipe_file(filename):
     return graph, obstacles
 
 
-def transform(p, t):
-    """
-    Transforms point p using scaling matrix and translation vector given by t.
-
-    :param p: [x, y]
-    :param t: [m11, m12, m21, m22, t1, t2]
-    :return: [[m11, m12], [m21, m22]] * [x, y] + [t1, t2]
-    """
-    return [t[0] * p[0] + t[1] * p[1] + t[4], t[2] * p[0] + t[3] * p[1] + t[5]]
-
-
 def main():
-    graph, obstacles = read_ipe_file('instance_from_report.ipe')
+    instance = 'instance_from_report'
+    graph, obstacles = read_ipe_file(f'{instance}.ipe')
     print(graph)
 
     print("\nObstacles:")
     for obstacle in obstacles:
         print(f"- {obstacle}")
+
+    visualize_input(graph, obstacles, instance)
 
 
 if __name__ == "__main__":

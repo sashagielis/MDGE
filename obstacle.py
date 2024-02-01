@@ -1,7 +1,8 @@
 class Obstacle:
-    def __init__(self, path, color):
+    def __init__(self, path, fill_color, stroke_color='black'):
         self.path = path
-        self.color = color
+        self.fill_color = fill_color
+        self.stroke_color = stroke_color
 
     def __str__(self):
         result = "["
