@@ -4,15 +4,21 @@ import xml.etree.ElementTree as ET
 from graph import *
 from obstacle import *
 from utils import transform_point
-from visualizer import visualize_input
+from visualizer import visualize
 
 
-def read_ipe_file(filename):
+ipe_instance_names = [
+        'simplified_instance_from_report',
+        'instance_from_report',
+]
+
+
+def read_ipe_instance(instance):
     vertices = []
     edges = []
     obstacles = []
 
-    tree = ET.parse(f'instances/{filename}')
+    tree = ET.parse(f'instances/ipe/{instance}')
     root = tree.getroot()
 
     current_layer = None
@@ -72,15 +78,23 @@ def read_ipe_file(filename):
 
 
 def main():
-    instance = 'simplified_instance_from_report'
-    graph, obstacles = read_ipe_file(f'{instance}.ipe')
-    print(graph)
+    for instance in ipe_instance_names:
+        graph, obstacles = read_ipe_instance(f'{instance}.ipe')
 
-    print("\nObstacles:")
-    for obstacle in obstacles:
-        print(f"- {obstacle}")
+        print("\n" + instance)
+        print(graph)
+        print("Obstacles:")
+        for obstacle in obstacles:
+            print(f"- {obstacle}")
 
-    visualize_input(graph, obstacles, instance)
+        visualize(graph, obstacles, instance, False)
+
+        # Test visualization large vertices and thick edges
+        for vertex in graph.vertices:
+            vertex.diameter = 3
+        for edge in graph.edges:
+            edge.thickness = 3
+        visualize(graph, obstacles, instance, True)
 
 
 if __name__ == "__main__":

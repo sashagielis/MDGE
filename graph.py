@@ -1,18 +1,20 @@
 class Vertex:
-    def __init__(self, x, y, color):
+    def __init__(self, x, y, color='black'):
         self.x = x
         self.y = y
         self.color = color
+        self.diameter = 1
 
     def __str__(self):
         return f"({self.x}, {self.y})"
 
 
 class Edge:
-    def __init__(self, path, weight, color):
+    def __init__(self, path, weight, color='black'):
         self.path = path
         self.weight = weight
         self.color = color
+        self.thickness = 1
 
     def __str__(self):
         result = "["
