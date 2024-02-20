@@ -1,4 +1,5 @@
 import math
+import numpy as np
 import os
 
 from bokeh.embed import file_html
@@ -7,6 +8,7 @@ from bokeh.plotting import figure
 from bokeh.resources import CDN
 from html2image import Html2Image
 from pathlib import Path
+from scipy.spatial import Delaunay
 
 from utils import angle, distance
 
@@ -15,7 +17,7 @@ min_point_diameter = 1
 min_edge_width = 1
 
 
-def visualize(graph, obstacles, instance_name, thick_edges=True):
+def visualize(graph, obstacles, instance_name, thick_edges=True, show_delaunay=False):
     """
     Visualizes the given instance.
 
@@ -23,6 +25,7 @@ def visualize(graph, obstacles, instance_name, thick_edges=True):
     :param obstacles: list of Obstacle objects
     :param instance_name: name of the instance
     :param thick_edges: whether the instance should be drawn with thick edges
+    :param show_delaunay: whether the Delaunay triangulation on the vertices and obstacles should be drawn
     """
     plot = figure()
     plot.axis.visible = False
@@ -66,10 +69,20 @@ def visualize(graph, obstacles, instance_name, thick_edges=True):
         size = vertex.diameter if thick_edges else min_point_diameter
         plot.circle(vertex.x, vertex.y, radius=size/2, color=vertex.color)
 
+    if show_delaunay:
+        vertex_points = [[vertex.x, vertex.y] for vertex in graph.vertices]
+        obstacle_points = [obstacle.path[0] for obstacle in obstacles]
+        delaunay_points = np.array(vertex_points + obstacle_points)
+        dt = Delaunay(delaunay_points)
+        for triangle in dt.simplices:
+            xs = [delaunay_points[i][0] for i in triangle]
+            ys = [delaunay_points[i][1] for i in triangle]
+            plot.multi_polygons([[[xs]]], [[[ys]]], line_color='black', fill_alpha=0)
+
     # Save plot as png
-    hti = Html2Image()
     full_screen_plot = gridplot([[plot]], toolbar_location=None, sizing_mode='stretch_both')
     html = file_html(full_screen_plot, CDN)
+    hti = Html2Image()
     hti.screenshot(html_str=html, save_as=f'{instance_name}.png')
 
     if thick_edges:
@@ -83,7 +96,7 @@ def visualize(graph, obstacles, instance_name, thick_edges=True):
 
 def get_thick_segment_corners(p1, p2, thickness):
     """
-    Returns the four corners of the rectangle forming a thick line segment between p1 and p2.
+    Returns the four corners of the rectangle forming a thick line segment between points p1 and p2.
     Source: https://stackoverflow.com/questions/41898990/find-corners-of-a-rotated-rectangle-given-its-center-point-and-rotation
     """
     length = distance(p1, p2)
