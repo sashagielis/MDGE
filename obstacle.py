@@ -6,8 +6,8 @@ class Obstacle:
 
     def __str__(self):
         result = "["
-        for node in self.path:
-            result += f"({node[0]}, {node[1]}), "
+        for point in self.path:
+            result += str(point) + ", "
         result = result[:-2] + "]"
 
         return result

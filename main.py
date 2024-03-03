@@ -41,15 +41,16 @@ def read_ipe_instance(instance):
         match obj.tag:
             case 'use':
                 pos = [float(i) for i in obj.get('pos').split()]
-                x, y = transform_point(pos, transformation)
+                point = Point(pos[0], pos[1])
+                transform_point(point, transformation)
 
                 color = obj.get('stroke')
 
                 if current_layer == 'graph':
-                    vertex = Vertex(x, y, color)
+                    vertex = Vertex(point.x, point.y, color)
                     vertices.append(vertex)
                 else:
-                    obstacle = Obstacle([[x, y]], color)
+                    obstacle = Obstacle([point], color)
                     obstacles.append(obstacle)
 
             case 'path':
@@ -57,9 +58,9 @@ def read_ipe_instance(instance):
                 path = []
                 for node_string in nodes_string.split('\n'):
                     coordinates = [float(i) for i in node_string.split()[:-1]]
-                    pos = coordinates[-2], coordinates[-1]
-                    x, y = transform_point(pos, transformation)
-                    path.append([x, y])
+                    point = Point(coordinates[-2], coordinates[-1])
+                    transform_point(point, transformation)
+                    path.append(point)
 
                 if current_layer == 'graph':
                     if obj.get('custom') is not None:

@@ -10,6 +10,7 @@ from html2image import Html2Image
 from pathlib import Path
 from scipy.spatial import Delaunay
 
+from point import Point
 from utils import angle, distance
 
 # Minimum visible point diameter and edge width
@@ -35,10 +36,10 @@ def visualize(graph, obstacles, instance_name, thick_edges=True, show_delaunay=F
     for obstacle in obstacles:
         path = obstacle.path
         if len(path) == 1:
-            plot.circle(path[0][0], path[0][1], radius=min_point_diameter/2, color=obstacle.fill_color)
+            plot.circle(path[0].x, path[0].y, radius=min_point_diameter/2, color=obstacle.fill_color)
         else:
-            xs = [p[0] for p in path]
-            ys = [p[1] for p in path]
+            xs = [p.x for p in path]
+            ys = [p.y for p in path]
             plot.multi_polygons([[[xs]]], [[[ys]]], line_color=obstacle.stroke_color, fill_color=obstacle.fill_color)
 
     # Draw edges
@@ -51,14 +52,15 @@ def visualize(graph, obstacles, instance_name, thick_edges=True, show_delaunay=F
                 p1 = path[i]
                 p2 = path[i + 1]
                 if i != 0:
-                    plot.circle(p1[0], p1[1], radius=edge.thickness/2, color=edge.color)
+                    plot.circle(p1.x, p1.y, radius=edge.thickness/2, color=edge.color)
 
                 segment_corners = get_thick_segment_corners(p1, p2, edge.thickness)
-                xs.append([[[corner[0] for corner in segment_corners]]])
-                ys.append([[[corner[1] for corner in segment_corners]]])
+                xs.append([[[corner.x for corner in segment_corners]]])
+                ys.append([[[corner.y for corner in segment_corners]]])
         else:
-            xs = [p[0] for p in path]
-            ys = [p[1] for p in path]
+            xs = [p.x for p in path]
+            ys = [p.y for p in path]
+
         if thick_edges:
             plot.multi_polygons(xs, ys, line_color=edge.color, fill_color=edge.color)
         else:
@@ -70,14 +72,19 @@ def visualize(graph, obstacles, instance_name, thick_edges=True, show_delaunay=F
         plot.circle(vertex.x, vertex.y, radius=size/2, color=vertex.color)
 
     if show_delaunay:
+        # Compute Delaunay triangulation on vertices and point obstacles
         vertex_points = [[vertex.x, vertex.y] for vertex in graph.vertices]
-        obstacle_points = [obstacle.path[0] for obstacle in obstacles]
+        obstacle_points = [[obstacle.path[0].x, obstacle.path[0].y] for obstacle in obstacles]
         delaunay_points = np.array(vertex_points + obstacle_points)
         dt = Delaunay(delaunay_points)
+
+        # Draw Delaunay triangulation
+        xs = []
+        ys = []
         for triangle in dt.simplices:
-            xs = [delaunay_points[i][0] for i in triangle]
-            ys = [delaunay_points[i][1] for i in triangle]
-            plot.multi_polygons([[[xs]]], [[[ys]]], line_color='black', fill_alpha=0)
+            xs.append([[[delaunay_points[i][0] for i in triangle]]])
+            ys.append([[[delaunay_points[i][1] for i in triangle]]])
+        plot.multi_polygons(xs, ys, line_color='black', fill_alpha=0)
 
     # Save plot as png
     full_screen_plot = gridplot([[plot]], toolbar_location=None, sizing_mode='stretch_both')
@@ -101,18 +108,18 @@ def get_thick_segment_corners(p1, p2, thickness):
     """
     length = distance(p1, p2)
     theta = angle(p1, p2)
-    segment_center = [(p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2]
+    center = Point((p1.x + p2.x) / 2, (p1.y + p2.y) / 2)
 
-    tr_x = segment_center[0] + length / 2 * math.cos(theta) - thickness / 2 * math.sin(theta)
-    tr_y = segment_center[1] + length / 2 * math.sin(theta) + thickness / 2 * math.cos(theta)
+    tr_x = center.x + length / 2 * math.cos(theta) - thickness / 2 * math.sin(theta)
+    tr_y = center.y + length / 2 * math.sin(theta) + thickness / 2 * math.cos(theta)
 
-    tl_x = segment_center[0] - length / 2 * math.cos(theta) - thickness / 2 * math.sin(theta)
-    tl_y = segment_center[1] - length / 2 * math.sin(theta) + thickness / 2 * math.cos(theta)
+    tl_x = center.x - length / 2 * math.cos(theta) - thickness / 2 * math.sin(theta)
+    tl_y = center.y - length / 2 * math.sin(theta) + thickness / 2 * math.cos(theta)
 
-    bl_x = segment_center[0] - length / 2 * math.cos(theta) + thickness / 2 * math.sin(theta)
-    bl_y = segment_center[1] - length / 2 * math.sin(theta) - thickness / 2 * math.cos(theta)
+    bl_x = center.x - length / 2 * math.cos(theta) + thickness / 2 * math.sin(theta)
+    bl_y = center.y - length / 2 * math.sin(theta) - thickness / 2 * math.cos(theta)
 
-    br_x = segment_center[0] + length / 2 * math.cos(theta) + thickness / 2 * math.sin(theta)
-    br_y = segment_center[1] + length / 2 * math.sin(theta) - thickness / 2 * math.cos(theta)
+    br_x = center.x + length / 2 * math.cos(theta) + thickness / 2 * math.sin(theta)
+    br_y = center.y + length / 2 * math.sin(theta) - thickness / 2 * math.cos(theta)
     
-    return [[tr_x, tr_y], [tl_x, tl_y], [bl_x, bl_y], [br_x, br_y]]
+    return [Point(tr_x, tr_y), Point(tl_x, tl_y), Point(bl_x, bl_y), Point(br_x, br_y)]

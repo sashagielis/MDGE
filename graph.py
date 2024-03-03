@@ -1,12 +1,11 @@
-class Vertex:
+from point import Point
+
+
+class Vertex(Point):
     def __init__(self, x, y, color='black'):
-        self.x = x
-        self.y = y
+        super().__init__(x, y)
         self.color = color
         self.diameter = 1
-
-    def __str__(self):
-        return f"({self.x}, {self.y})"
 
 
 class Edge:
@@ -18,8 +17,8 @@ class Edge:
 
     def __str__(self):
         result = "["
-        for node in self.path:
-            result += f"({node[0]}, {node[1]}), "
+        for point in self.path:
+            result += str(point) + ", "
         result = result[:-2] + "]"
 
         return result + f", weight = {self.weight}"
