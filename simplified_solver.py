@@ -5,7 +5,7 @@ from itertools import pairwise
 from scipy.optimize import minimize
 
 from solver import Solver
-from utils import do_intersect, orientation
+from utils import do_intersect
 
 
 class SimplifiedSolver(Solver):
@@ -126,8 +126,9 @@ class SimplifiedSolver(Solver):
         # Assign the new positions to the obstacles
         flat_new_obstacles = result['x']
         for i in range(0, len(flat_new_obstacles), 2):
-            self.instance.obstacles[int(i / 2)].path[0].x = flat_new_obstacles[i]
-            self.instance.obstacles[int(i / 2)].path[0].y = flat_new_obstacles[i + 1]
+            o = self.instance.obstacles[int(i / 2)].path[0]
+            o.x = flat_new_obstacles[i]
+            o.y = flat_new_obstacles[i + 1]
 
         return result['fun']
 

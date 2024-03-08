@@ -4,7 +4,7 @@ class Point:
         self.y = y
 
     def __str__(self):
-        return f"({self.x}, {self.y})"
+        return f"({float(self.x)}, {float(self.y)})"
 
     def __eq__(self, other):
         return self.x == other.x and self.y == other.y

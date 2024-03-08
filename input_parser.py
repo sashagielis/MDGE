@@ -1,6 +1,7 @@
 import os
 import xml.etree.ElementTree as ET
 
+from fractions import Fraction
 from graph import *
 from obstacle import *
 from utils import transform_point
@@ -35,7 +36,7 @@ def read_ipe_instance(instance):
 
         # Determine transformation applied by IPE
         if obj.get('matrix') is not None:
-            transformation = [float(i) for i in obj.get('matrix').split()]
+            transformation = [Fraction(i) for i in obj.get('matrix').split()]
         else:
             transformation = [1, 0, 0, 1, 0, 0]
 
@@ -43,7 +44,7 @@ def read_ipe_instance(instance):
             case 'use':
                 # The object is a mark
                 pos = [float(i) for i in obj.get('pos').split()]
-                point = Point(pos[0], pos[1])
+                point = Point(Fraction(pos[0]), Fraction(pos[1]))
                 transform_point(point, transformation)
 
                 color = obj.get('stroke')
@@ -63,7 +64,7 @@ def read_ipe_instance(instance):
                 path = []
                 for node_string in nodes_string.split('\n'):
                     coordinates = [float(i) for i in node_string.split()[:-1]]
-                    point = Point(coordinates[-2], coordinates[-1])
+                    point = Point(Fraction(coordinates[-2]), Fraction(coordinates[-1]))
                     transform_point(point, transformation)
                     path.append(point)
 

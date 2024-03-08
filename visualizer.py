@@ -40,14 +40,14 @@ def visualize(instance, thick_edges=True, show_delaunay=False):
                 p1 = path[i]
                 p2 = path[i + 1]
                 if i != 0:
-                    plot.circle(p1.x, p1.y, radius=edge.thickness/2, color=edge.color)
+                    plot.circle(float(p1.x), float(p1.y), radius=edge.thickness/2, color=edge.color)
 
                 segment_corners = get_thick_segment_corners(p1, p2, edge.thickness)
                 xs.append([[[corner.x for corner in segment_corners]]])
                 ys.append([[[corner.y for corner in segment_corners]]])
         else:
-            xs = [p.x for p in path]
-            ys = [p.y for p in path]
+            xs = [float(p.x) for p in path]
+            ys = [float(p.y) for p in path]
 
         if thick_edges:
             plot.multi_polygons(xs, ys, line_color=edge.color, fill_color=edge.color)
@@ -58,21 +58,21 @@ def visualize(instance, thick_edges=True, show_delaunay=False):
     for obstacle in instance.obstacles:
         path = obstacle.path
         if len(path) == 1:
-            plot.circle(path[0].x, path[0].y, radius=min_point_diameter / 2, color=obstacle.fill_color)
+            plot.circle(float(path[0].x), float(path[0].y), radius=min_point_diameter/2, color=obstacle.fill_color)
         else:
-            xs = [p.x for p in path]
-            ys = [p.y for p in path]
+            xs = [float(p.x) for p in path]
+            ys = [float(p.y) for p in path]
             plot.multi_polygons([[[xs]]], [[[ys]]], line_color=obstacle.stroke_color, fill_color=obstacle.fill_color)
 
     # Draw vertices
     for vertex in instance.graph.vertices:
         size = vertex.diameter if thick_edges else min_point_diameter
-        plot.circle(vertex.x, vertex.y, radius=size/2, color=vertex.color)
+        plot.circle(float(vertex.x), float(vertex.y), radius=size/2, color=vertex.color)
 
     if show_delaunay:
         # Compute Delaunay triangulation on vertices and point obstacles
-        vertex_points = [[vertex.x, vertex.y] for vertex in instance.graph.vertices]
-        obstacle_points = [[obstacle.path[0].x, obstacle.path[0].y] for obstacle in instance.obstacles]
+        vertex_points = [[float(vertex.x), float(vertex.y)] for vertex in instance.graph.vertices]
+        obstacle_points = [[float(obstacle.path[0].x), float(obstacle.path[0].y)] for obstacle in instance.obstacles]
         delaunay_points = np.array(vertex_points + obstacle_points)
         dt = Delaunay(delaunay_points)
 
