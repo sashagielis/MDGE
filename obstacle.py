@@ -1,5 +1,5 @@
 class Obstacle:
-    def __init__(self, path, fill_color, stroke_color='black'):
+    def __init__(self, path, fill_color='grey', stroke_color='black'):
         self.path = path
         self.fill_color = fill_color
         self.stroke_color = stroke_color

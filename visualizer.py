@@ -18,32 +18,20 @@ min_point_diameter = 1
 min_edge_width = 1
 
 
-def visualize(graph, obstacles, instance_name, thick_edges=True, show_delaunay=False):
+def visualize(instance, thick_edges=True, show_delaunay=False):
     """
     Visualizes the given instance.
 
-    :param graph: Graph object
-    :param obstacles: list of Obstacle objects
-    :param instance_name: name of the instance
+    :param instance: Instance object
     :param thick_edges: whether the instance should be drawn with thick edges
     :param show_delaunay: whether the Delaunay triangulation on the vertices and obstacles should be drawn
     """
-    plot = figure()
+    plot = figure(match_aspect=True)
     plot.axis.visible = False
     plot.grid.visible = False
 
-    # Draw obstacles
-    for obstacle in obstacles:
-        path = obstacle.path
-        if len(path) == 1:
-            plot.circle(path[0].x, path[0].y, radius=min_point_diameter/2, color=obstacle.fill_color)
-        else:
-            xs = [p.x for p in path]
-            ys = [p.y for p in path]
-            plot.multi_polygons([[[xs]]], [[[ys]]], line_color=obstacle.stroke_color, fill_color=obstacle.fill_color)
-
     # Draw edges
-    for edge in graph.edges:
+    for edge in instance.graph.edges:
         path = edge.path
         if thick_edges:
             xs = []
@@ -66,15 +54,25 @@ def visualize(graph, obstacles, instance_name, thick_edges=True, show_delaunay=F
         else:
             plot.line(xs, ys, line_width=min_edge_width, color=edge.color)
 
+    # Draw obstacles
+    for obstacle in instance.obstacles:
+        path = obstacle.path
+        if len(path) == 1:
+            plot.circle(path[0].x, path[0].y, radius=min_point_diameter / 2, color=obstacle.fill_color)
+        else:
+            xs = [p.x for p in path]
+            ys = [p.y for p in path]
+            plot.multi_polygons([[[xs]]], [[[ys]]], line_color=obstacle.stroke_color, fill_color=obstacle.fill_color)
+
     # Draw vertices
-    for vertex in graph.vertices:
+    for vertex in instance.graph.vertices:
         size = vertex.diameter if thick_edges else min_point_diameter
         plot.circle(vertex.x, vertex.y, radius=size/2, color=vertex.color)
 
     if show_delaunay:
         # Compute Delaunay triangulation on vertices and point obstacles
-        vertex_points = [[vertex.x, vertex.y] for vertex in graph.vertices]
-        obstacle_points = [[obstacle.path[0].x, obstacle.path[0].y] for obstacle in obstacles]
+        vertex_points = [[vertex.x, vertex.y] for vertex in instance.graph.vertices]
+        obstacle_points = [[obstacle.path[0].x, obstacle.path[0].y] for obstacle in instance.obstacles]
         delaunay_points = np.array(vertex_points + obstacle_points)
         dt = Delaunay(delaunay_points)
 
@@ -90,7 +88,7 @@ def visualize(graph, obstacles, instance_name, thick_edges=True, show_delaunay=F
     full_screen_plot = gridplot([[plot]], toolbar_location=None, sizing_mode='stretch_both')
     html = file_html(full_screen_plot, CDN)
     hti = Html2Image()
-    hti.screenshot(html_str=html, save_as=f'{instance_name}.png')
+    hti.screenshot(html_str=html, save_as=f'{instance.name}.png')
 
     if thick_edges:
         path = f'plots/output'
@@ -98,7 +96,7 @@ def visualize(graph, obstacles, instance_name, thick_edges=True, show_delaunay=F
         path = f'plots/input'
 
     Path(path).mkdir(parents=True, exist_ok=True)
-    os.replace(f'{instance_name}.png', f'{path}/{instance_name}.png')
+    os.replace(f'{instance.name}.png', f'{path}/{instance.name}.png')
 
 
 def get_thick_segment_corners(p1, p2, thickness):

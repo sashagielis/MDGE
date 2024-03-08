@@ -42,7 +42,7 @@ def orientation(p, q, r):
     """
     Determines the orientation of the ordered point triplet (p, q, r).
     Source: https://www.geeksforgeeks.org/orientation-3-ordered-points/amp/
-    :returns 0 : collinear, 1 : clockwise, 2 : counterclockwise
+    :returns: 0 : collinear, 1 : clockwise, 2 : counterclockwise
     """
     val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y)
 

@@ -1,10 +1,11 @@
-from input_parser import read_ipe_instance
+from instance import SimplifiedInstance, GeneralInstance
 from visualizer import visualize
 
-
+# IPE instances
 ipe_instances = {
     "simplified": [
         'simplified_instance_from_report',
+        'test',
     ],
     "MDGD": [
         'instance_from_report',
@@ -13,41 +14,38 @@ ipe_instances = {
 
 
 def main():
-    for instance in ipe_instances["simplified"]:
-        graph, obstacles = read_ipe_instance(f'{instance}.ipe')
+    for instance_name in ipe_instances["simplified"]:
+        instance = SimplifiedInstance(instance_name, 'ipe')
 
-        print("\n" + instance)
-        print(graph)
-        print("Obstacles:")
-        for obstacle in obstacles:
-            print(f"- {obstacle}")
-
-        visualize(graph, obstacles, instance, False, True)
+        print(instance)
+        visualize(instance, False, False)
 
         # Test visualization large vertices and thick edges
-        for vertex in graph.vertices:
-            vertex.diameter = 3
-        for edge in graph.edges:
-            edge.thickness = 3
-        visualize(graph, obstacles, instance, True, True)
+        for vertex in instance.graph.vertices:
+            vertex.diameter = 15
+        for edge in instance.graph.edges:
+            edge.thickness = 15
 
-    for instance in ipe_instances["MDGD"]:
-        graph, obstacles = read_ipe_instance(f'{instance}.ipe')
+        instance.solve()
 
-        print("\n" + instance)
-        print(graph)
-        print("Obstacles:")
-        for obstacle in obstacles:
-            print(f"- {obstacle}")
+        print(instance)
+        visualize(instance, True, False)
 
-        visualize(graph, obstacles, instance, False, False)
+    for instance_name in ipe_instances["MDGD"]:
+        instance = GeneralInstance(instance_name, 'ipe')
+        print(instance)
+
+        visualize(instance, False, False)
 
         # Test visualization large vertices and thick edges
-        for vertex in graph.vertices:
+        for vertex in instance.graph.vertices:
             vertex.diameter = 3
-        for edge in graph.edges:
+        for edge in instance.graph.edges:
             edge.thickness = 3
-        visualize(graph, obstacles, instance, True, False)
+
+        instance.solve()
+
+        visualize(instance, True, False)
 
 
 if __name__ == "__main__":
