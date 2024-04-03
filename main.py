@@ -4,11 +4,13 @@ from visualizer import visualize
 # IPE instances
 ipe_instances = {
     "simplified": [
-        'simplified_instance_from_report',
-        'test',
+        #'simplified_instance_from_report',
+        'small test',
+        #'too large test',
+        #'very large test',
     ],
     "MDGD": [
-        'instance_from_report',
+        #'instance_from_report',
     ]
 }
 
@@ -22,9 +24,9 @@ def main():
 
         # Test visualization large vertices and thick edges
         for vertex in instance.graph.vertices:
-            vertex.diameter = 15
+            vertex.diameter = 20
         for edge in instance.graph.edges:
-            edge.thickness = 15
+            edge.thickness = 20
 
         instance.solve()
 

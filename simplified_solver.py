@@ -1,3 +1,4 @@
+import gurobipy as gp
 import math
 
 from functools import partial
@@ -15,9 +16,10 @@ class SimplifiedSolver(Solver):
         """
         super().__init__(instance)
 
-    def displace_obstacles(self):
+    def displace_obstacles_scipy(self):
         """
-        Computes new obstacle positions by minimizing an objective function subject to constraints.
+        Computes new obstacle positions by minimizing maximum displacement subject to minimum separation constraints.
+        Uses SciPy optimization, which is fast but computes a local optimum.
 
         :returns: the final value of the objective function
         """
@@ -72,8 +74,6 @@ class SimplifiedSolver(Solver):
             return math.sqrt(dx ** 2 + dy ** 2) - min_sep
 
         constraints = []
-
-        # Create a constraint for each pair of obstacles
         for i in range(len(self.instance.obstacles)):
             # Create obstacle pair constraints
             for j in range(i + 1, len(self.instance.obstacles)):
@@ -123,7 +123,7 @@ class SimplifiedSolver(Solver):
         # Apply optimization to compute new obstacle positions
         result = minimize(objective, initial_obstacles, args=initial_obstacles, method='SLSQP', constraints=constraints)
 
-        # Assign the new positions to the obstacles
+        # Assign computed positions to obstacles
         flat_new_obstacles = result['x']
         for i in range(0, len(flat_new_obstacles), 2):
             o = self.instance.obstacles[int(i / 2)].path[0]
@@ -132,11 +132,95 @@ class SimplifiedSolver(Solver):
 
         return result['fun']
 
+    def displace_obstacles_gurobi(self):
+        """
+        Computes new obstacle positions by minimizing maximum displacement subject to minimum separation constraints.
+        Uses Gurobi optimization, which computes a global optimum but is slow (since it solves a non-convex MIQCP).
+
+        :returns: the final value of the objective function
+        """
+        model = gp.Model("Displace obstacles")
+
+        new_xs, new_ys = [], []
+        displacements = []
+        for i in range(len(self.instance.obstacles)):
+            o = self.instance.obstacles[i].path[0]
+
+            # Create variables for new x- and y-coordinates of obstacles
+            new_xs.append(model.addVar(name=f"x(o'_{i})"))
+            new_ys.append(model.addVar(name=f"y(o'_{i})"))
+
+            # Add variable equal to summed squares of x and y differences
+            dx = new_xs[i] - o.x
+            dy = new_ys[i] - o.y
+            summed_squares = model.addVar(name=f"(x(o'_{i}) - x(o_{i}))^2 + (y(o'_{i}) - y(o_{i}))^2")
+            model.addConstr(summed_squares == dx ** 2 + dy ** 2)
+
+            # Add variable equal to displacement, that is, Euclidean distance between current and new obstacle
+            displacements.append(model.addVar(name=f"d(o_{i}, o'_{i})"))
+            model.addGenConstrPow(summed_squares, displacements[i], 0.5)
+
+        # Add variable equal to maximum over all displacements and use it as objective to be minimized
+        objective = model.addVar(name="max displacement")
+        model.addGenConstrMax(objective, displacements)
+        model.setObjective(objective, gp.GRB.MINIMIZE)
+
+        for i in range(len(self.instance.obstacles)):
+            # Create obstacle pair constraints
+            for j in range(i + 1, len(self.instance.obstacles)):
+                o1 = self.instance.obstacles[i].path[0]
+                o2 = self.instance.obstacles[j].path[0]
+
+                # Compute the total thickness of the edges passing in between o1 and o2
+                # To do this, for each edge link pq, check if it intersects line segment o1o2
+                # Assumes that o1, o2 and line segment pq are disjoint
+                total_thickness = 0
+                for edge in self.instance.graph.edges:
+                    for (p, q) in pairwise(edge.path):
+                        if do_intersect(o1, o2, p, q):
+                            total_thickness += edge.thickness
+
+                # Add minimum separation constraint on the pair of obstacles, i.e., d(o_1, o_2) >= min_sep
+                dx = new_xs[i] - new_xs[j]
+                dy = new_ys[i] - new_ys[j]
+                model.addConstr(dx ** 2 + dy ** 2 >= total_thickness ** 2)
+
+            # Create obstacle-vertex constraints
+            for v in self.instance.graph.vertices:
+                o = self.instance.obstacles[i].path[0]
+
+                # Compute the total thickness of the edges passing in between o and v
+                # To do this, for each edge link pq, check if it intersects line segment ov and if so, not in a vertex
+                # Assumes that o and line segment pq are disjoint
+                total_thickness = 0
+                for edge in self.instance.graph.edges:
+                    for (p, q) in list(pairwise(edge.path)):
+                        if do_intersect(o, v, p, q) and not (v == p or v == q):
+                            total_thickness += edge.thickness
+
+                # Add extra space to draw vertex
+                min_separation = total_thickness + v.diameter / 2
+
+                # Add minimum separation constraint on the obstacle-vertex pair, i.e., d(o, v) >= min_sep
+                dx = new_xs[i] - v.x
+                dy = new_ys[i] - v.y
+                model.addConstr(dx ** 2 + dy ** 2 >= min_separation ** 2)
+
+        # Apply optimization to compute new obstacle positions
+        model.optimize()
+
+        # Assign computed positions to obstacles
+        for i in range(len(self.instance.obstacles)):
+            o = self.instance.obstacles[i].path[0]
+            o.x = new_xs[i].X
+            o.y = new_ys[i].X
+
+        return model.ObjVal
+
     def solve(self):
         # TODO: compute shortest homotopic edges
 
         # Displace the obstacles
-        displacement_cost = self.displace_obstacles()
-        print(f"Displacement cost = {displacement_cost}")
+        displacement_cost = self.displace_obstacles_gurobi()
 
         # TODO: compute thick homotopic edges using growing algorithm
