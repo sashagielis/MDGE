@@ -1,13 +1,15 @@
 from instance import SimplifiedInstance, GeneralInstance
+from obstacle import PointObstacle
+from point import Point
 from visualizer import visualize
 
 # IPE instances
 ipe_instances = {
     "simplified": [
         #'simplified_instance_from_report',
-        'small test',
-        #'too large test',
-        #'very large test',
+        #'small test',
+        'very large test',
+        'very large test 2',
     ],
     "MDGD": [
         #'instance_from_report',
@@ -28,15 +30,15 @@ def main():
         for edge in instance.graph.edges:
             edge.thickness = 20
 
-        instance.solve()
+        instance.solve('heuristic')
 
         print(instance)
         visualize(instance, True, False)
 
     for instance_name in ipe_instances["MDGD"]:
         instance = GeneralInstance(instance_name, 'ipe')
-        print(instance)
 
+        print(instance)
         visualize(instance, False, False)
 
         # Test visualization large vertices and thick edges
@@ -47,6 +49,7 @@ def main():
 
         instance.solve()
 
+        print(instance)
         visualize(instance, True, False)
 
 

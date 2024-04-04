@@ -1,5 +1,7 @@
+from gurobi_displacer import GurobiDisplacer
+from heuristic_displacer import HeuristicDisplacer
 from input_parser import read_ipe_instance
-from simplified_solver import SimplifiedSolver
+from scipy_displacer import ScipyDisplacer
 
 
 class Instance:
@@ -31,9 +33,24 @@ class SimplifiedInstance(Instance):
     def __init__(self, instance_name, file_type):
         super().__init__(instance_name, file_type)
 
-    def solve(self):
-        solver = SimplifiedSolver(self)
-        solver.solve()
+    def solve(self, displacement_method='heuristic'):
+        # TODO: compute shortest homotopic edges
+
+        # Choose displacement method
+        if displacement_method == 'scipy':
+            displacer = ScipyDisplacer(self)
+        elif displacement_method == 'gurobi':
+            displacer = GurobiDisplacer(self)
+        elif displacement_method == 'heuristic':
+            displacer = HeuristicDisplacer(self)
+        else:
+            exit()
+
+        # Displace the obstacles
+        displacement_cost = displacer.execute()
+        print(f"Displacement cost = {displacement_cost}")
+
+        # TODO: compute thick homotopic edges using growing algorithm
 
 
 class GeneralInstance(Instance):

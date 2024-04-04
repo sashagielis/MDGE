@@ -47,15 +47,13 @@ def read_ipe_instance(instance):
                 point = Point(Fraction(pos[0]), Fraction(pos[1]))
                 transform_point(point, transformation)
 
-                color = obj.get('stroke')
-
                 if current_layer == 'graph':
                     # The mark is a vertex
-                    vertex = Vertex(point.x, point.y, color)
+                    vertex = Vertex(point.x, point.y, obj.get('stroke'))
                     vertices.append(vertex)
                 else:
                     # The mark is a point obstacle
-                    obstacle = Obstacle([point], color)
+                    obstacle = PointObstacle(point, obj.get('stroke'))
                     obstacles.append(obstacle)
 
             case 'path':
@@ -79,10 +77,12 @@ def read_ipe_instance(instance):
                     edges.append(edge)
                 else:
                     # The path is a polygonal obstacle
-                    if len(path) > 1:
+                    if len(path) == 1:
+                        obstacle = PointObstacle(path[0], obj.get('fill'), obj.get('stroke'))
+                    else:
                         path = path[:-1]
+                        obstacle = Obstacle(path, obj.get('fill'), obj.get('stroke'))
 
-                    obstacle = Obstacle(path, obj.get('fill'), obj.get('stroke'))
                     obstacles.append(obstacle)
 
     # Replace first and last point of each edge by corresponding vertices

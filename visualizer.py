@@ -10,6 +10,7 @@ from html2image import Html2Image
 from pathlib import Path
 from scipy.spatial import Delaunay
 
+from obstacle import PointObstacle
 from point import Point
 from utils import angle, distance
 
@@ -56,10 +57,10 @@ def visualize(instance, thick_edges=True, show_delaunay=False):
 
     # Draw obstacles
     for obstacle in instance.obstacles:
-        path = obstacle.path
-        if len(path) == 1:
-            plot.circle(float(path[0].x), float(path[0].y), radius=min_point_diameter/2, color=obstacle.fill_color)
+        if type(obstacle) == PointObstacle:
+            plot.circle(float(obstacle.x), float(obstacle.y), radius=min_point_diameter/2, color=obstacle.fill_color)
         else:
+            path = obstacle.path
             xs = [float(p.x) for p in path]
             ys = [float(p.y) for p in path]
             plot.multi_polygons([[[xs]]], [[[ys]]], line_color=obstacle.stroke_color, fill_color=obstacle.fill_color)
