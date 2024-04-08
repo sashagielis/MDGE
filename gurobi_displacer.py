@@ -3,7 +3,6 @@ import gurobipy as gp
 from constraint import ObstaclePairConstraint
 from obstacle_displacer import ObstacleDisplacer
 from point import Point
-from utils import distance
 
 
 class GurobiDisplacer(ObstacleDisplacer):
@@ -13,7 +12,7 @@ class GurobiDisplacer(ObstacleDisplacer):
         """
         super().__init__(instance)
 
-    def execute(self):
+    def displace_obstacles(self):
         """
         Computes new obstacle positions by minimizing maximum displacement subject to minimum separation constraints.
         Uses Gurobi optimization, which computes a global optimum but is slow (since it solves a non-convex MIQCP).
@@ -46,9 +45,6 @@ class GurobiDisplacer(ObstacleDisplacer):
         model.addGenConstrMax(objective, displacements)
         model.setObjective(objective, gp.GRB.MINIMIZE)
 
-        # Compute minimum separation constraints
-        self.compute_constraints()
-
         # Add constraints to model
         for constraint in self.constraints:
             if type(constraint) == ObstaclePairConstraint:
@@ -77,8 +73,5 @@ class GurobiDisplacer(ObstacleDisplacer):
             new_pos = Point(new_xs[i].X, new_ys[i].X)
             o.x = new_pos.x
             o.y = new_pos.y
-
-            # Update displacement cost
-            o.displacement = distance(o, new_pos)
 
         return model.ObjVal

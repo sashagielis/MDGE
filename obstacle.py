@@ -13,10 +13,11 @@ class Obstacle:
 
 
 class PointObstacle(Point, Obstacle):
-    def __init__(self, point, fill_color='grey', stroke_color='black'):
+    def __init__(self, point, fill_color='grey'):
         Point.__init__(self, point.x, point.y)
-        Obstacle.__init__(self, fill_color, stroke_color)
+        Obstacle.__init__(self, fill_color)
 
+        self.original_position = Point(point.x, point.y)
         self.displacement = 0
 
 

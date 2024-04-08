@@ -1,18 +1,18 @@
 from instance import SimplifiedInstance, GeneralInstance
-from obstacle import PointObstacle
-from point import Point
 from visualizer import visualize
 
 # IPE instances
 ipe_instances = {
     "simplified": [
-        #'simplified_instance_from_report',
-        #'small test',
-        'very large test',
-        'very large test 2',
+        # 'simplified_instance_from_report',
+        # 'One line small',
+        # 'One line large',
+        # 'Two lines',
+        # 'Curve edge case',
+        'Two lines edge case',
     ],
     "MDGD": [
-        #'instance_from_report',
+        # 'instance_from_report',
     ]
 }
 
@@ -25,29 +25,12 @@ def main():
         visualize(instance, False, False)
 
         # Test visualization large vertices and thick edges
-        for vertex in instance.graph.vertices:
-            vertex.diameter = 20
+        # for vertex in instance.graph.vertices:
+        #     vertex.diameter = 100
         for edge in instance.graph.edges:
-            edge.thickness = 20
+            edge.thickness = edge.weight
 
-        instance.solve('heuristic')
-
-        print(instance)
-        visualize(instance, True, False)
-
-    for instance_name in ipe_instances["MDGD"]:
-        instance = GeneralInstance(instance_name, 'ipe')
-
-        print(instance)
-        visualize(instance, False, False)
-
-        # Test visualization large vertices and thick edges
-        for vertex in instance.graph.vertices:
-            vertex.diameter = 3
-        for edge in instance.graph.edges:
-            edge.thickness = 3
-
-        instance.solve()
+        instance.solve(displacement_method='iterative')
 
         print(instance)
         visualize(instance, True, False)

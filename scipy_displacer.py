@@ -6,7 +6,6 @@ from scipy.optimize import minimize
 from constraint import ObstaclePairConstraint
 from obstacle_displacer import ObstacleDisplacer
 from point import Point
-from utils import distance
 
 
 def objective(new_obstacles, old_obstacles):
@@ -69,16 +68,13 @@ class ScipyDisplacer(ObstacleDisplacer):
         """
         super().__init__(instance)
 
-    def execute(self):
+    def displace_obstacles(self):
         """
         Computes new obstacle positions by minimizing maximum displacement subject to minimum separation constraints.
         Uses SciPy optimization, which is fast but computes a local optimum.
 
         :returns: the final value of the objective function
         """
-        # Compute minimum separation constraints
-        self.compute_constraints()
-
         # Add constraints to model
         cons = []
         for constraint in self.constraints:
@@ -114,8 +110,5 @@ class ScipyDisplacer(ObstacleDisplacer):
             new_pos = Point(flat_new_obstacles[i], flat_new_obstacles[i + 1])
             o.x = new_pos.x
             o.y = new_pos.y
-
-            # Update displacement cost
-            o.displacement = distance(o, new_pos)
 
         return result['fun']

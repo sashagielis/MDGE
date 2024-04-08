@@ -69,7 +69,7 @@ def read_ipe_instance(instance):
                 if current_layer == 'graph':
                     # The path is an edge
                     if obj.get('custom') is not None:
-                        weight = obj.get('custom')
+                        weight = float(obj.get('custom'))
                     else:
                         weight = 1
 
@@ -78,10 +78,10 @@ def read_ipe_instance(instance):
                 else:
                     # The path is a polygonal obstacle
                     if len(path) == 1:
-                        obstacle = PointObstacle(path[0], obj.get('fill'), obj.get('stroke'))
+                        obstacle = PointObstacle(path[0], obj.get('fill'))
                     else:
                         path = path[:-1]
-                        obstacle = Obstacle(path, obj.get('fill'), obj.get('stroke'))
+                        obstacle = PolygonalObstacle(path, obj.get('fill'), obj.get('stroke'))
 
                     obstacles.append(obstacle)
 

@@ -23,7 +23,7 @@ def visualize(instance, thick_edges=True, show_delaunay=False):
     """
     Visualizes the given instance.
 
-    :param instance: Instance object
+    :param instance: an Instance object
     :param thick_edges: whether the instance should be drawn with thick edges
     :param show_delaunay: whether the Delaunay triangulation on the vertices and obstacles should be drawn
     """
