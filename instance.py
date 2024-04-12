@@ -49,7 +49,7 @@ class SimplifiedInstance(Instance):
             displacer = IterativeDisplacer(self)
         elif displacement_method == 'sweep':
             displacer = SweepDisplacer(self)
-        elif displacement_method == 'diamond displacement':
+        elif displacement_method == 'diamond':
             displacer = DiamondDisplacer(self)
         else:
             exit()

@@ -4,12 +4,12 @@ from visualizer import visualize
 # IPE instances
 ipe_instances = {
     'simplified': [
-        'simplified_instance_from_report',
         'One line small',
         'One line large',
         'Two lines',
         'Curve edge case',
         'Two lines edge case',
+        'simplified_instance_from_report',
     ],
     'general': [
         'instance_from_report',
@@ -35,7 +35,7 @@ def main():
         for edge in instance.graph.edges:
             edge.thickness = edge.weight
 
-        displacement_method = 'diamond displacement'
+        displacement_method = 'diamond'
         instance.solve(displacement_method)
         print(instance)
 
