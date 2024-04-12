@@ -1,3 +1,6 @@
+import os
+
+from diamond_displacer import DiamondDisplacer
 from gurobi_displacer import GurobiDisplacer
 from iterative_displacer import IterativeDisplacer
 from input_parser import read_ipe_instance
@@ -9,9 +12,9 @@ class Instance:
     """
     An instance of the MDGD problem.
     """
-    def __init__(self, instance_name, file_type):
-        if file_type == 'ipe':
-            graph, obstacles = read_ipe_instance(f'{instance_name}.ipe')
+    def __init__(self, instance_name, file):
+        if os.path.splitext(file)[1] == '.ipe':
+            graph, obstacles = read_ipe_instance(file)
         else:
             exit()
 
@@ -31,8 +34,8 @@ class SimplifiedInstance(Instance):
     """
     An instance of the simplified MDGD problem.
     """
-    def __init__(self, instance_name, file_type):
-        super().__init__(instance_name, file_type)
+    def __init__(self, instance_name, file):
+        super().__init__(instance_name, file)
 
     def solve(self, displacement_method):
         # TODO: compute shortest homotopic edges
@@ -46,6 +49,8 @@ class SimplifiedInstance(Instance):
             displacer = IterativeDisplacer(self)
         elif displacement_method == 'sweep':
             displacer = SweepDisplacer(self)
+        elif displacement_method == 'diamond displacement':
+            displacer = DiamondDisplacer(self)
         else:
             exit()
 
@@ -60,8 +65,8 @@ class GeneralInstance(Instance):
     """
     An instance of the general MDGD problem.
     """
-    def __init__(self, instance_name, file_type):
-        super().__init__(instance_name, file_type)
+    def __init__(self, instance_name, file):
+        super().__init__(instance_name, file)
 
     def solve(self):
         # TODO

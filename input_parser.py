@@ -16,11 +16,14 @@ def read_ipe_instance(instance):
     - 'obstacles': containing point obstacles (marks [M]) and/or polygonal obstacles (polylines [P])
     :returns: a Graph object and a list of Obstacle objects describing the MDGD instance
     """
+    # Initialize Obstacle id counter
+    Obstacle.id_iter = itertools.count()
+
     vertices = []
     edges = []
     obstacles = []
 
-    tree = ET.parse(f'instances/ipe/{instance}')
+    tree = ET.parse(instance)
     root = tree.getroot()
 
     current_layer = None

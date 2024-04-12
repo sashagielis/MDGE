@@ -72,6 +72,16 @@ class ObstacleDisplacer:
         """
         raise Exception(f"Method displace_obstacles not implemented for {type(self).__name__}")
 
+    def is_valid_solution(self):
+        """
+        Determines whether the current configuration of obstacles satisfies all constraints.
+        """
+        for constraint in self.constraints:
+            if constraint.value > 0:
+                return False
+
+        return True
+
     def compute_cost(self):
         """
         Computes the maximum displacement over all obstacles.
@@ -86,9 +96,10 @@ class ObstacleDisplacer:
         self.compute_constraints_naive()
 
         # Displace the obstacles
-        cost = self.displace_obstacles()
+        self.displace_obstacles()
 
-        if cost is None:
-            cost = self.compute_cost()
-
-        return cost
+        if self.is_valid_solution():
+            # Return displacement cost
+            return self.compute_cost()
+        else:
+            raise Exception("There are remaining conflicts!")

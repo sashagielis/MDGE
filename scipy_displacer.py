@@ -107,8 +107,7 @@ class ScipyDisplacer(ObstacleDisplacer):
         flat_new_obstacles = result['x']
         for i in range(0, len(flat_new_obstacles), 2):
             o = self.instance.obstacles[int(i / 2)]
-            new_pos = Point(flat_new_obstacles[i], flat_new_obstacles[i + 1])
-            o.x = new_pos.x
-            o.y = new_pos.y
+            o.x = flat_new_obstacles[i]
+            o.y = flat_new_obstacles[i + 1]
 
         return result['fun']

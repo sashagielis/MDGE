@@ -14,7 +14,13 @@ class Constraint:
         self.p1 = p1
         self.p2 = p2
         self.min_separation = min_sep
-        self.value = max(0, min_sep - distance(p1, p2))
+
+    @property
+    def value(self):
+        """
+        Returns the conflict value of the constraint.
+        """
+        return max(0, self.min_separation - distance(self.p1, self.p2))
 
     def __str__(self):
         return f"d({self.p1}, {self.p2}) >= {self.min_separation}"
