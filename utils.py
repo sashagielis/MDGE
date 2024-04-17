@@ -4,6 +4,7 @@ import math
 def transform_point(p, t):
     """
     Transforms point p using scaling matrix [[m11, m12], [m21, m22]] and translation vector [t1, t2].
+
     :param p: Point
     :param t: [m11, m12, m21, m22, t1, t2]
     """
@@ -42,6 +43,7 @@ def orientation(p, q, r):
     """
     Determines the orientation of the ordered point triplet (p, q, r).
     Source: https://www.geeksforgeeks.org/orientation-3-ordered-points/amp/
+
     :returns: 0 : collinear, 1 : clockwise, 2 : counterclockwise
     """
     val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y)

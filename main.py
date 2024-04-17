@@ -5,14 +5,14 @@ from visualizer import visualize
 ipe_instances = {
     'simplified': [
         'One line small',
-        'One line large',
-        'Two lines',
-        'Curve edge case',
-        'Two lines edge case',
-        'simplified_instance_from_report',
+        # 'One line large',
+        # 'Two lines',
+        # 'Curve edge case',
+        # 'Two lines edge case',
+        # 'simplified_instance_from_report',
     ],
     'general': [
-        'instance_from_report',
+        # 'instance_from_report',
     ]
 }
 
@@ -21,7 +21,7 @@ def main():
     for instance_name in ipe_instances['simplified']:
         file = f"instances/simplified/ipe/{instance_name}.ipe"
         instance = SimplifiedInstance(instance_name, file)
-        print(instance)
+        # print(instance)
 
         ipe_plot_folder = "plots/simplified/ipe"
 
@@ -37,7 +37,7 @@ def main():
 
         displacement_method = 'diamond'
         instance.solve(displacement_method)
-        print(instance)
+        # print(instance)
 
         # Visualize output
         output_folder = f"{ipe_plot_folder}/output/{displacement_method} displacement"

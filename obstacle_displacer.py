@@ -29,7 +29,7 @@ class ObstacleDisplacer:
                 # To do this, for each edge link pq, check if it intersects line segment o1o2
                 # Assumes that o1, o2 and line segment pq are disjoint
                 total_thickness = 0
-                for edge in self.instance.graph.edges:
+                for edge in self.instance.graph.half_edges:
                     for (p, q) in pairwise(edge.path):
                         if do_intersect(o1, o2, p, q) and not on_segment(o1, o2, p):
                             total_thickness += edge.thickness
@@ -50,7 +50,7 @@ class ObstacleDisplacer:
                 # To do this, for each edge link pq, check if it intersects line segment ov and if so, not in a vertex
                 # Assumes that o and line segment pq are disjoint
                 total_thickness = 0
-                for edge in self.instance.graph.edges:
+                for edge in self.instance.graph.half_edges:
                     for (p, q) in list(pairwise(edge.path)):
                         if do_intersect(o, v, p, q) and not (v == p or v == q) and not on_segment(o, v, p):
                             total_thickness += edge.thickness

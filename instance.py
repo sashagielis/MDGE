@@ -2,6 +2,7 @@ import os
 
 from diamond_displacer import DiamondDisplacer
 from gurobi_displacer import GurobiDisplacer
+from homotopy import Homotopy
 from iterative_displacer import IterativeDisplacer
 from input_parser import read_ipe_instance
 from scipy_displacer import ScipyDisplacer
@@ -38,7 +39,9 @@ class SimplifiedInstance(Instance):
         super().__init__(instance_name, file)
 
     def solve(self, displacement_method):
-        # TODO: compute shortest homotopic edges
+        # Compute shortest homotopic edges
+        homotopy = Homotopy(self)
+        homotopy.compute_shortest_edges()
 
         # Choose displacement method
         if displacement_method == 'scipy':
@@ -57,6 +60,8 @@ class SimplifiedInstance(Instance):
         # Displace the obstacles
         displacement_cost = displacer.execute()
         print(f"Displacement cost = {displacement_cost}")
+
+        # TODO: Recompute shortest homotopic edges
 
         # TODO: compute thick homotopic edges using growing algorithm
 

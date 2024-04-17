@@ -74,7 +74,7 @@ def visualize(instance, folder, thick_edges=True, show_delaunay=False):
     if show_delaunay:
         # Compute Delaunay triangulation on vertices and point obstacles
         vertex_points = [[float(vertex.x), float(vertex.y)] for vertex in instance.graph.vertices]
-        obstacle_points = [[float(obstacle.path[0].x), float(obstacle.path[0].y)] for obstacle in instance.obstacles]
+        obstacle_points = [[float(obstacle.x), float(obstacle.y)] for obstacle in instance.obstacles]
         delaunay_points = np.array(vertex_points + obstacle_points)
         dt = Delaunay(delaunay_points)
 
