@@ -19,18 +19,24 @@ min_point_diameter = 1
 min_edge_width = 1
 
 
-def visualize(instance, folder, thick_edges=True, show_delaunay=False):
+def visualize(instance, folder, thick_edges=True, show_axes=False, show_delaunay=False):
     """
     Visualizes the given instance.
 
     :param instance: an Instance object
     :param folder: the folder in which the plot should be saved
     :param thick_edges: whether the instance should be drawn with thick edges
+    :param show_axes: whether the axes of the plot should be drawn
     :param show_delaunay: whether the Delaunay triangulation on the vertices and obstacles should be drawn
     """
     plot = figure(match_aspect=True)
-    plot.axis.visible = False
-    plot.grid.visible = False
+
+    if show_axes:
+        plot.axis.visible = True
+        plot.grid.visible = True
+    else:
+        plot.axis.visible = False
+        plot.grid.visible = False
 
     # Draw edges
     for edge in instance.graph.edges:

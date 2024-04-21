@@ -4,12 +4,11 @@ from visualizer import visualize
 # IPE instances
 ipe_instances = {
     'simplified': [
-        'One line small',
+        # 'One line small',
         # 'One line large',
-        # 'Two lines',
         # 'Curve edge case',
         # 'Two lines edge case',
-        # 'simplified_instance_from_report',
+        'simplified_instance_from_report',
     ],
     'general': [
         # 'instance_from_report',
@@ -27,7 +26,7 @@ def main():
 
         # Visualize input
         input_folder = f"{ipe_plot_folder}/input"
-        visualize(instance, input_folder, False, False)
+        visualize(instance, input_folder, False, True, True)
 
         # Test visualization large vertices and thick edges
         # for vertex in instance.graph.vertices:
@@ -41,7 +40,7 @@ def main():
 
         # Visualize output
         output_folder = f"{ipe_plot_folder}/output/{displacement_method} displacement"
-        visualize(instance, output_folder, True, False)
+        visualize(instance, output_folder, True)
 
 
 if __name__ == "__main__":

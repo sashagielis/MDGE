@@ -1,5 +1,7 @@
 import math
 
+from point import Point
+
 
 def transform_point(p, t):
     """
@@ -29,14 +31,35 @@ def angle(p, q):
     return math.atan2(dy, dx)
 
 
-def on_segment(p, q, r):
+def angle_around_point(p, q, r):
     """
-    Determines whether point r lies on line segment pq.
+    Determines the counterclockwise angle in degrees by turning from p to r around q.
     """
-    if max(p.x, q.x) >= r.x >= min(p.x, q.x) and max(p.y, q.y) >= r.y >= min(p.y, q.y):
-        return True
+    ang = math.degrees(angle(q, r) - angle(q, p))
 
-    return False
+    return ang + 360 if ang < 0 else ang
+
+
+def vector_length(p):
+    """
+    Determines the length of vector p.
+    """
+    return math.sqrt(p.x ** 2 + p.y ** 2)
+
+
+def vector_bisector(p, q):
+    """
+    Determines the bisector of vectors p and q, which is orthogonal and to the left of p if they are opposite vectors.
+    """
+    unit_p = p / vector_length(p)
+    unit_q = q / vector_length(q)
+
+    bisector = unit_p + unit_q
+    if bisector == Point(0, 0):
+        # p and q are opposite vectors
+        bisector = Point(-unit_p.y, unit_p.x)
+
+    return bisector
 
 
 def orientation(p, q, r):
@@ -59,7 +82,24 @@ def orientation(p, q, r):
         return 0
 
 
-def do_intersect(p1, q1, p2, q2):
+def on_segment(p, q, r):
+    """
+    Determines whether point r lies on line segment pq.
+    """
+    if max(p.x, q.x) >= r.x >= min(p.x, q.x) and max(p.y, q.y) >= r.y >= min(p.y, q.y):
+        return True
+
+    return False
+
+
+def on_half_line(p, q, r):
+    """
+    Determines whether point r lies on the half-line with origin p and another point q.
+    """
+    return orientation(p, q, r) == 0 and (on_segment(p, q, r) or on_segment(p, r, q))
+
+
+def check_segment_segment_intersection(p1, q1, p2, q2):
     """
     Determines whether line segments p1q1 and p2q2 intersect.
     Source: https://www.geeksforgeeks.org/check-if-two-given-line-segments-intersect/
@@ -93,3 +133,35 @@ def do_intersect(p1, q1, p2, q2):
 
     # If none of the cases apply
     return False
+
+
+def check_segment_line_intersection(p1, q1, p2, q2):
+    """
+    Determines whether line segment p1q1 and the line through p2 and q2 intersect.
+    """
+    o_p1 = orientation(p2, q2, p1)
+    o_q1 = orientation(q2, p2, q1)
+
+    if o_p1 == 0 or o_q1 == 0 or o_p1 == o_q1:
+        return True
+    else:
+        return False
+
+
+def check_segment_half_line_intersection(p1, q1, p2, q2):
+    """
+    Determines whether line segment p1q1 and the half-line with origin p2 and another point q2 intersect.
+    """
+    if not check_segment_line_intersection(p1, q1, p2, q2):
+        return False
+
+    o_p1 = orientation(p2, q2, p1)
+    o_q1 = orientation(p2, q2, q1)
+
+    if o_p1 == 2 or o_q1 == 1:
+        return angle_around_point(q1, p2, p1) <= 180
+    elif o_p1 == 1 or o_q1 == 2:
+        return angle_around_point(p1, p2, q1) <= 180
+    else:
+        # p1q1 and p2q2 are collinear
+        return on_half_line(p2, q2, p1) or on_half_line(p2, q2, q1)

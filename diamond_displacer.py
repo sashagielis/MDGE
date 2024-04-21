@@ -21,7 +21,12 @@ class DiamondDisplacer(ObstacleDisplacer):
 
         :returns: the final value of the objective function
         """
-        model = gp.Model("Displace obstacles")
+        # Create environment to suppress all Gurobi output
+        env = gp.Env(empty=True)
+        env.setParam("OutputFlag", 0)
+        env.start()
+
+        model = gp.Model("Displace obstacles", env=env)
 
         d = 0.5 * math.sqrt(2)
         C = [Point(-d, d), Point(d, d), Point(d, -d), Point(-d, -d)]

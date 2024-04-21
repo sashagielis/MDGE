@@ -1,22 +1,29 @@
+import itertools
+
 from point import Point
 
 
 class Vertex(Point):
+    id_iter = itertools.count()
+
     def __init__(self, x, y, color='black'):
         super().__init__(x, y)
+        self.id = next(self.id_iter)
         self.color = color
         self.diameter = 1
 
 
 class Edge:
     def __init__(self, path, weight, color='black'):
+        self.v1 = path[0]
+        self.v2 = path[-1]
         self.path = path
         self.weight = weight
         self.color = color
         self.thickness = 1
 
     def __str__(self):
-        result = "["
+        result = f"({self.color}) ["
         for point in self.path:
             result += str(point) + ", "
         result = result[:-2] + "]"

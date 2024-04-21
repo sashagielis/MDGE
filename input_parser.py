@@ -16,7 +16,8 @@ def read_ipe_instance(instance):
     - 'obstacles': containing point obstacles (marks [M]) and/or polygonal obstacles (polylines [P])
     :returns: a Graph object and a list of Obstacle objects describing the MDGD instance
     """
-    # Initialize Obstacle id counter
+    # Initialize Vertex and Obstacle id counters
+    Vertex.id_iter = itertools.count()
     Obstacle.id_iter = itertools.count()
 
     vertices = []
@@ -92,9 +93,11 @@ def read_ipe_instance(instance):
     for edge in edges:
         for vertex in vertices:
             if edge.path[0] == vertex:
+                edge.v1 = vertex
                 edge.path[0] = vertex
 
             if edge.path[-1] == vertex:
+                edge.v2 = vertex
                 edge.path[-1] = vertex
 
     graph = Graph(vertices, edges)
