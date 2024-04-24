@@ -1,5 +1,4 @@
 import math
-import numpy as np
 import os
 
 from bokeh.embed import file_html
@@ -8,8 +7,8 @@ from bokeh.plotting import figure
 from bokeh.resources import CDN
 from html2image import Html2Image
 from pathlib import Path
-from scipy.spatial import Delaunay
 
+from delaunay_triangulation import DelaunayTriangulation
 from obstacle import PointObstacle
 from point import Point
 from utils import angle, distance
@@ -78,18 +77,14 @@ def visualize(instance, folder, thick_edges=True, show_axes=False, show_delaunay
         plot.circle(float(vertex.x), float(vertex.y), radius=size/2, color=vertex.color)
 
     if show_delaunay:
-        # Compute Delaunay triangulation on vertices and point obstacles
-        vertex_points = [[float(vertex.x), float(vertex.y)] for vertex in instance.graph.vertices]
-        obstacle_points = [[float(obstacle.x), float(obstacle.y)] for obstacle in instance.obstacles]
-        delaunay_points = np.array(vertex_points + obstacle_points)
-        dt = Delaunay(delaunay_points)
+        dt = DelaunayTriangulation(instance)
 
         # Draw Delaunay triangulation
         xs = []
         ys = []
-        for triangle in dt.simplices:
-            xs.append([[[delaunay_points[i][0] for i in triangle]]])
-            ys.append([[[delaunay_points[i][1] for i in triangle]]])
+        for triangle in dt.dt.simplices:
+            xs.append([[[float(dt.vertices[i].x) for i in triangle]]])
+            ys.append([[[float(dt.vertices[i].y) for i in triangle]]])
         plot.multi_polygons(xs, ys, line_color='black', fill_alpha=0)
 
     # Save plot as png

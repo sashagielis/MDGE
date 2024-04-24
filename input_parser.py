@@ -1,3 +1,4 @@
+import math
 import os
 import xml.etree.ElementTree as ET
 
@@ -14,7 +15,7 @@ def read_ipe_instance(instance):
     :param instance: an IPE file consisting of a single page with the following layers:
     - 'graph': containing vertices (marks [M]) and edges (polylines [P])
     - 'obstacles': containing point obstacles (marks [M]) and/or polygonal obstacles (polylines [P])
-    :returns: a Graph object and a list of Obstacle objects describing the MDGD instance
+    :returns: a Graph object, a list of Obstacle objects and the x- and y-ranges of the instance
     """
     # Initialize Vertex and Obstacle id counters
     Vertex.id_iter = itertools.count()
@@ -23,6 +24,10 @@ def read_ipe_instance(instance):
     vertices = []
     edges = []
     obstacles = []
+
+    # Initialize instance dimensions
+    x_range = [math.inf, -math.inf]
+    y_range = [math.inf, -math.inf]
 
     tree = ET.parse(instance)
     root = tree.getroot()
@@ -51,6 +56,10 @@ def read_ipe_instance(instance):
                 point = Point(Fraction(pos[0]), Fraction(pos[1]))
                 transform_point(point, transformation)
 
+                # Update instance dimensions
+                x_range = [min(x_range[0], point.x), max(x_range[1], point.x)]
+                y_range = [min(y_range[0], point.y), max(y_range[1], point.y)]
+
                 if current_layer == 'graph':
                     # The mark is a vertex
                     vertex = Vertex(point.x, point.y, obj.get('stroke'))
@@ -69,6 +78,10 @@ def read_ipe_instance(instance):
                     point = Point(Fraction(coordinates[-2]), Fraction(coordinates[-1]))
                     transform_point(point, transformation)
                     path.append(point)
+
+                    # Update instance dimensions
+                    x_range = [min(x_range[0], point.x), max(x_range[1], point.x)]
+                    y_range = [min(y_range[0], point.y), max(y_range[1], point.y)]
 
                 if current_layer == 'graph':
                     # The path is an edge
@@ -102,4 +115,4 @@ def read_ipe_instance(instance):
 
     graph = Graph(vertices, edges)
 
-    return graph, obstacles
+    return graph, obstacles, x_range, y_range

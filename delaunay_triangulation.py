@@ -4,26 +4,26 @@ from scipy.spatial import Delaunay
 from graph import Vertex
 from obstacle import PointObstacle
 from point import Point
-from utils import check_segment_half_line_intersection, check_segment_segment_intersection, vector_bisector, orientation
+from utils import check_segment_segment_intersection, orientation, vector_bisector
 
 
 class DelaunayVertex(Point):
     """
-    A vertex of the Delaunay triangulation representing a Vertex or PointObstacle.
+    A vertex of the Delaunay triangulation.
     """
     def __init__(self, point):
         """
-        :param point: a Vertex or PointObstacle object
+        :param point: a Point object
         """
         super().__init__(point.x, point.y)
 
         self.point = point
-        self.outgoing_edges = []  # Set of Delaunay edges leaving the vertex
+        self.outgoing_edges = []  # Set of half-edges leaving the vertex
 
 
 class HalfEdge:
     """
-    A half-edge connecting two DelaunayVertex objects, contained within the face on its left-hand side.
+    A half-edge connecting two DelaunayVertex objects, contained within the triangle on its left-hand side.
     """
     def __init__(self, origin, target):
         """
@@ -33,8 +33,8 @@ class HalfEdge:
         self.origin = origin
         self.target = target
         self.twin = None  # The reverse half-edge directed from target to origin
-        self.next = None  # The next Delaunay edge along the same face
-        self.prev = None  # The previous Delaunay edge along the same face
+        self.next = None  # The next half-edge along the same face
+        self.prev = None  # The previous half-edge along the same face
         self.face = None  # The face containing the half-edge
 
     def orientation(self, p):
@@ -44,15 +44,6 @@ class HalfEdge:
         :returns: 0 : collinear, 1 : clockwise, 2 : counterclockwise
         """
         return orientation(self.origin, self.target, p)
-
-    def bisector(self, other):
-        """
-        Determines the bisector between two half-edges.
-        """
-        vec1 = self.target - self.origin
-        vec2 = other.target - other.origin
-
-        return vector_bisector(vec1, vec2)
 
     def intersects(self, p, q):
         """
@@ -67,119 +58,50 @@ class HalfEdge:
         return f"{self.origin} -> {self.target}"
 
 
-class HalfLine:
+class Triangle:
     """
-    A half-line originated in a DelaunayVertex object, contained within the outer face on its left-hand side.
-    """
-    def __init__(self, origin, other_point, rev=False):
-        """
-        :param origin: a Point object, specifying the origin of the half-line
-        :param other_point: a Point object, specifying some point on the half-line other than the origin
-        :param rev: whether the half-line is reversed, i.e., is directed towards its origin
-        """
-        self.origin = origin
-        self.other_point = other_point
-        self.reversed = rev
-        self.twin = None  # The reverse half-line
-        self.next = None  # The next Delaunay edge along the same face, may be None
-        self.prev = None  # The previous Delaunay edge along the same face, may be None
-        self.face = None  # The outer face containing the half-line
-
-    def orientation(self, p):
-        """
-        Determines the orientation of the point with respect to the half-line.
-
-        :returns: 0 : collinear, 1 : clockwise, 2 : counterclockwise
-        """
-        if self.reversed:
-            return orientation(self.other_point, self.origin, p)
-        else:
-            return orientation(self.origin, self.other_point, p)
-
-    def intersects(self, p, q):
-        """
-        Determines whether the half-line intersects line segment pq.
-        """
-        if check_segment_half_line_intersection(self.origin, self.other_point, p, q):
-            return True
-        else:
-            return False
-
-    def __str__(self):
-        if self.reversed:
-            return f"inf -> {self.origin}"
-        else:
-            return f"{self.origin} -> inf"
-
-
-class Face:
-    """
-    A face of the subdivision.
+    A triangle of the Delaunay triangulation.
     """
     def __init__(self):
-        self.edges = []  # Set of Delaunay edges forming the face
-
-    def exited_by(self, p, q):
-        """
-        Determines whether line segment pq exits the face, i.e., crosses an edge of the face towards the outside.
-
-        :param p: a Point object
-        :param q: a Point object
-        :returns: the crossed Delaunay edge, or None if pq does not exit the face
-        """
-        for edge in self.edges:
-            if edge.intersects(p, q) and edge.orientation(p) == 2 and edge.orientation(q) == 1:
-                return edge
-
-        return None
-
-
-class Triangle(Face):
-    """
-    A triangle consisting of exactly three HalfEdge objects.
-    """
-    def __init__(self):
-        super().__init__()
+        self.half_edges = []  # Set of half-edges forming the triangle
 
     def get_edge(self, origin, target):
         """
-        Returns the edge in the triangle with given origin and target, or None otherwise.
+        Returns the edge in the triangle with given origin and target, or None if it does not exist.
         """
-        for edge in self.edges:
-            if edge.origin == origin and edge.target == target:
-                return edge
+        for he in self.half_edges:
+            if he.origin == origin and he.target == target:
+                return he
+
+        return None
+
+    def exited_by(self, p, q):
+        """
+        Determines whether an edge exits the triangle via its link pq.
+        Checks if the directed line segment pq crosses one of the triangles' half-edges towards the outside.
+
+        :param p: a Point object
+        :param q: a Point object
+        :returns: the crossed half-edge, or None if pq does not exit the triangle
+        """
+        for he in self.half_edges:
+            if (he.intersects(p, q)
+                    and (he.orientation(p) == 2 != he.orientation(q)
+                         or (he.orientation(p) == 0 and he.orientation(q) == 1))):
+                return he
 
         return None
 
     def __str__(self):
-        return f"{self.edges[0].origin} -> {self.edges[0].next.origin} -> {self.edges[0].next.next.origin}"
+        he = self.half_edges[0]
 
-
-class OuterFace(Face):
-    """
-    An outer face consisting of exactly one HalfEdge and two HalfLine objects.
-    """
-    def __init__(self):
-        super().__init__()
-
-    @property
-    def half_edge(self):
-        """
-        Returns the half-edge on the boundary of the face.
-        """
-        for edge in self.edges:
-            if type(edge) == HalfEdge:
-                return edge
-
-        raise Exception("Outer face does not contain a HalfEdge")
-
-    def __str__(self):
-        return f"<- {self.half_edge} ->"
+        return f"{he.origin} -> {he.target} -> {he.next.target}"
 
 
 class DelaunayTriangulation:
     """
-    A Delaunay triangulation consisting of a set of Triangle objects and OuterFace objects.
+    A Delaunay triangulation on the vertices and obstacles in the instance.
+    Extra points are added to specify a bounding box of the instance.
     """
     def __init__(self, instance):
         """
@@ -187,107 +109,62 @@ class DelaunayTriangulation:
         """
         self.instance = instance
 
-        # Construct the Delaunay vertices corresponding to the vertices and obstacles
+        # Construct Delaunay vertices corresponding to the vertices and obstacles
         dt_vertices = [DelaunayVertex(vertex) for vertex in self.instance.graph.vertices]
         dt_obstacles = [DelaunayVertex(obstacle) for obstacle in self.instance.obstacles]
-        self.vertices = dt_vertices + dt_obstacles
 
-        # Compute the Delaunay triangulation on the vertices and obstacles
-        dt_input_points = np.array([[float(vertex.point.x), float(vertex.point.y)] for vertex in self.vertices])
-        dt = Delaunay(dt_input_points)
+        # Construct Delaunay vertices corresponding to a bounding box of the instance
+        dt_bb_tl_vertex = DelaunayVertex(Point(self.instance.min_x - 1, self.instance.max_y + 1))
+        dt_bb_tr_vertex = DelaunayVertex(Point(self.instance.max_x + 1, self.instance.max_y + 1))
+        dt_bb_br_vertex = DelaunayVertex(Point(self.instance.max_x + 1, self.instance.min_y - 1))
+        dt_bb_bl_vertex = DelaunayVertex(Point(self.instance.min_x - 1, self.instance.min_y - 1))
+        dt_bounding_box_vertices = [dt_bb_tl_vertex, dt_bb_tr_vertex, dt_bb_br_vertex, dt_bb_bl_vertex]
+
+        self.vertices = dt_vertices + dt_obstacles + dt_bounding_box_vertices
+
+        # Compute the Delaunay triangulation
+        dt_input_points = np.array([[float(vertex.x), float(vertex.y)] for vertex in self.vertices])
+        self.dt = Delaunay(dt_input_points)
 
         self.triangles = []
-        self.outer_faces = []
-        boundary_dt_edges = []
 
         # Iterate over all triangles
-        for i in range(len(dt.simplices)):
+        for i in range(len(self.dt.simplices)):
             triangle = Triangle()
 
             # Consider each edge of the triangle
             for j in range(3):
-                p1 = self.vertices[dt.simplices[i][j]]
-                p2 = self.vertices[dt.simplices[i][(j + 1) % 3]]
+                p1 = self.vertices[self.dt.simplices[i][j]]
+                p2 = self.vertices[self.dt.simplices[i][(j + 1) % 3]]
 
                 # Construct half-edge
-                edge = HalfEdge(p1, p2)
-                edge.face = triangle
-                p1.outgoing_edges.append(edge)
+                he = HalfEdge(p1, p2)
+                he.face = triangle
+                p1.outgoing_edges.append(he)
 
                 # Find other triangle adjacent to the edge
-                neighbor_index = dt.neighbors[i][(j + 2) % 3]
+                neighbor_index = self.dt.neighbors[i][(j + 2) % 3]
 
                 # If neighboring triangle was already created, find twin edge
                 if -1 < neighbor_index < i:
-                    twin_edge = self.triangles[neighbor_index].get_edge(p2, p1)
+                    twin = self.triangles[neighbor_index].get_edge(p2, p1)
 
                     # Set twin
-                    edge.twin = twin_edge
-                    twin_edge.twin = edge
+                    he.twin = twin
+                    twin.twin = he
 
-                # If no neighboring triangle, construct new outer face
-                elif neighbor_index == -1:
-                    outer_face = OuterFace()
-
-                    # Construct half-edge of outer face
-                    twin_edge = HalfEdge(p2, p1)
-                    twin_edge.face = outer_face
-                    p2.outgoing_edges.append(twin_edge)
-
-                    # Set twin
-                    edge.twin = twin_edge
-                    twin_edge.twin = edge
-
-                    outer_face.edges.append(twin_edge)
-                    self.outer_faces.append(outer_face)
-                    boundary_dt_edges.append(twin_edge)
-
-                triangle.edges.append(edge)
+                triangle.half_edges.append(he)
 
             # Set next and prev
             for j in range(3):
-                triangle.edges[j].next = triangle.edges[(j + 1) % 3]
-                triangle.edges[j].prev = triangle.edges[(j - 1) % 3]
+                triangle.half_edges[j].next = triangle.half_edges[(j + 1) % 3]
+                triangle.half_edges[j].prev = triangle.half_edges[(j - 1) % 3]
 
             self.triangles.append(triangle)
 
-        current_edge = boundary_dt_edges[0]
-
-        # Consider the half-edges on the boundary of the triangulation and construct half-lines defining outer faces
-        while boundary_dt_edges:
-            for next_edge in boundary_dt_edges:
-                if next_edge.origin == current_edge.target:
-                    # Compute half-line from DelaunayVertex moving 'outwards' of triangulation
-                    half_line_origin = current_edge.target
-                    bisector = current_edge.bisector(next_edge.twin)
-                    other_point_on_half_line = half_line_origin + bisector
-
-                    # Construct half-line
-                    half_line = HalfLine(current_edge.target, other_point_on_half_line)
-                    half_line.face = current_edge.face
-                    half_line_origin.outgoing_edges.append(half_line)
-
-                    # Construct reverse half-line
-                    rev_half_line = HalfLine(current_edge.target, other_point_on_half_line, True)
-                    rev_half_line.face = next_edge.face
-
-                    # Set twin
-                    half_line.twin = rev_half_line
-                    rev_half_line.twin = half_line
-
-                    # Set next and prev
-                    current_edge.next = half_line
-                    half_line.prev = current_edge
-                    next_edge.prev = rev_half_line
-                    rev_half_line.next = next_edge
-
-                    boundary_dt_edges.remove(next_edge)
-                    current_edge = next_edge
-                    break
-
     def get_delaunay_vertex_from_point(self, point):
         """
-        Maps a point to its corresponding vertex in the Delaunay triangulation.
+        Maps a Vertex or PointObstacle to its corresponding vertex in the Delaunay triangulation.
 
         :param point: a Vertex or PointObstacle object
         :returns: the DelaunayVertex object corresponding to the given point
@@ -304,9 +181,6 @@ class DelaunayTriangulation:
         for triangle in self.triangles:
             result += f"- {triangle}\n"
 
-        result += "\nOuter faces:\n"
-        for face in self.outer_faces:
-            result += f"- {face}\n"
         result = result[:-1]
 
         return result

@@ -33,24 +33,24 @@ class Homotopy:
         # Compute the Delaunay triangulation on the vertices and obstacles
         self.dt = DelaunayTriangulation(self.instance)
 
-    def compute_initial_face(self, edge):
+    def compute_initial_triangle(self, edge):
         """
-        Computes the first face of the Delaunay triangulation that the edge moves through.
-        Edge links located on the boundary of a face are not considered to be moving 'through' the face.
+        Computes the first triangle of the Delaunay triangulation that the edge moves through.
+        Edge links located on the boundary of a triangle are not considered to be moving 'through' the triangle.
 
         :param edge: an Edge object
-        :returns: the first face and the index of the first edge link moving through the face
+        :returns: the first triangle and the index of the first edge link moving through the triangle
         """
         # Retrieve Delaunay vertex corresponding to first edge vertex
         dt_v1 = self.dt.get_delaunay_vertex_from_point(edge.v1)
 
         i = 0
 
-        # Find the first edge link that moves through a face adjacent to v1
+        # Find the first edge link that moves through a triangle adjacent to v1
         while i < len(edge.path) - 1:
             target = edge.path[i + 1]
 
-            # For each face adjacent to v1, check if it contains the edge link
+            # For each triangle adjacent to v1, check if it contains the edge link
             for dt_edge in dt_v1.outgoing_edges:
                 if dt_edge.orientation(target) == dt_edge.prev.orientation(target) == 2:
                     return dt_edge.face, i
@@ -61,33 +61,34 @@ class Homotopy:
 
     def compute_crossing_sequence(self, edge):
         """
-        Computes the (unreduced) sequence of Delaunay edges and half-lines crossed by the edge.
+        Computes the (unreduced) sequence of half-edges of the Delaunay triangulation crossed by the edge.
+        Only records the half-edges that are crossed when exiting their corresponding triangle.
 
         :param edge: an Edge object
         :returns: a list describing the crossing sequence of the edge
         """
         sequence = []
 
-        # Compute initial face and index of first edge link moving 'through' the face
-        current_face, i = self.compute_initial_face(edge)
+        # Compute initial triangle and index of first edge link moving 'through' the triangle
+        current_triangle, i = self.compute_initial_triangle(edge)
 
         # Iterate over the edge links and record crossings
         while i < len(edge.path) - 1:
             p1 = edge.path[i]
             p2 = edge.path[i + 1]
 
-            # Compute which Delaunay edge of the current face is crossed by the edge link
-            crossed_dt_edge = current_face.exited_by(p1, p2)
+            # Compute which half-edge of the current triangle is crossed by the edge link
+            crossed_dt_edge = current_triangle.exited_by(p1, p2)
 
             # If no edge was crossed, consider the next edge link
-            # Otherwise, repeat the following until the edge link does not cross the current face:
+            # Otherwise, repeat the following until the edge link does not cross the current triangle:
             #   (1) add the crossed edge to the crossing sequence
-            #   (2) update the current face
-            #   (3) compute which Delaunay edge of the current face is crossed by the edge link
+            #   (2) update the current triangle
+            #   (3) compute which half-edge of the current triangle is crossed by the edge link
             while crossed_dt_edge is not None:
                 sequence.append(crossed_dt_edge)
-                current_face = crossed_dt_edge.twin.face
-                crossed_dt_edge = current_face.exited_by(p1, p2)
+                current_triangle = crossed_dt_edge.twin.face
+                crossed_dt_edge = current_triangle.exited_by(p1, p2)
 
             i += 1
 
@@ -103,12 +104,12 @@ class Homotopy:
         """
         reduced_sequence = []
 
-        # Iteratively remove adjacent pairs of equal crossings
-        for dt_edge in sequence:
-            if reduced_sequence and reduced_sequence[-1] == dt_edge.twin:
+        # Iteratively remove adjacent pairs of equivalent crossings
+        for he in sequence:
+            if reduced_sequence and reduced_sequence[-1] == he.twin:
                 reduced_sequence.pop()
             else:
-                reduced_sequence.append(dt_edge)
+                reduced_sequence.append(he)
 
         # Retrieve Delaunay vertices corresponding to edge vertices
         dt_v1 = self.dt.get_delaunay_vertex_from_point(edge.v1)

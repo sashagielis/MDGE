@@ -8,7 +8,8 @@ ipe_instances = {
         # 'One line large',
         # 'Curve edge case',
         # 'Two lines edge case',
-        'simplified_instance_from_report',
+        # 'simplified_instance_from_report',
+        'Test'
     ],
     'general': [
         # 'instance_from_report',

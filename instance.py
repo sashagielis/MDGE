@@ -15,13 +15,17 @@ class Instance:
     """
     def __init__(self, instance_name, file):
         if os.path.splitext(file)[1] == '.ipe':
-            graph, obstacles = read_ipe_instance(file)
+            graph, obstacles, x_range, y_range = read_ipe_instance(file)
         else:
             exit()
 
         self.name = instance_name
         self.graph = graph
         self.obstacles = obstacles
+        self.min_x = x_range[0]
+        self.max_x = x_range[1]
+        self.min_y = y_range[0]
+        self.max_y = y_range[1]
 
     def __str__(self):
         result = self.name + "\n" + str(self.graph) + "\nObstacles:\n"
