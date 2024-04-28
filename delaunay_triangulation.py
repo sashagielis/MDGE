@@ -4,7 +4,7 @@ from scipy.spatial import Delaunay
 from graph import Vertex
 from obstacle import PointObstacle
 from point import Point
-from utils import check_segment_segment_intersection, orientation, vector_bisector
+from utils import check_segment_segment_intersection, orientation
 
 
 class DelaunayVertex(Point):

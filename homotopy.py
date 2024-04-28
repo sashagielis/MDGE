@@ -1,26 +1,120 @@
+from collections import deque
+
 from delaunay_triangulation import DelaunayTriangulation
+from utils import orientation
 
 
-def compute_funnel(sequence, edge):
+class Funnel:
     """
-    Computes the funnel of the reduced crossing sequence through the Delaunay triangulation.
-
-    :param sequence: a list describing the reduced crossing sequence of the edge
-    :param edge: an Edge object
-    :returns a list describing the funnel of the edge
+    A funnel describing the possible space containing the shortest homotopic path of an edge.
+    The funnel consists of a tail (polygonal path) from source to a point called the apex, and a fan (simple polygon).
     """
-    return []
+    def __init__(self, tail, apex, fan):
+        """
+        :param tail: a list of Point objects
+        :param apex: a Point object
+        :param fan: a list of Point objects describing the fan from left to right
+        """
+        self.tail = tail
+        self.apex = apex
+        self.fan = deque(fan)
 
+    def contract_left(self, point):
+        """
+        Contracts the funnel from the left inwards based on the newly added point.
 
-def compute_shortest_path(funnel, edge):
-    """
-    Computes the shortest path through the funnel.
+        :param point: a Point object
+        """
+        # Initialize the leftmost wedge
+        wedge_origin = self.fan[1]
+        wedge_left_target = self.fan[0]
 
-    :param funnel: a list describing the funnel of the edge through the Delaunay triangulation
-    :param edge: an Edge object
-    :returns: a list describing the shortest homotopic path of the edge
-    """
-    return edge.path
+        # While the newly added point is not to the left of the leftmost wedge, shrink the funnel
+        while orientation(wedge_origin, wedge_left_target, point) != 2:
+            # Remove the leftmost point from the fan
+            old_leftmost_point = self.fan.popleft()
+            new_leftmost_point = self.fan[0]
+
+            # If removed point was the apex, set new apex
+            if old_leftmost_point == self.apex:
+                self.apex = new_leftmost_point
+                self.tail.append(self.apex)
+
+            # If leftmost point is the apex, the leftmost wedge is on the right concave chain of the fan
+            if new_leftmost_point == self.apex:
+                # If fan consists of only one point, we cannot shrink the funnel any further
+                if len(self.fan) == 1:
+                    return
+                else:
+                    wedge_origin = new_leftmost_point
+                    wedge_left_target = self.fan[1]
+
+            # Otherwise, the leftmost wedge is on the left concave chain of the fan
+            else:
+                wedge_origin = self.fan[1]
+                wedge_left_target = new_leftmost_point
+
+        # Extend fan to the left
+        self.fan.appendleft(point)
+
+    def contract_right(self, point):
+        """
+        Contracts the funnel from the right inwards based on the newly added point.
+
+        :param point: a Point object
+        """
+        # Initialize the rightmost wedge
+        wedge_origin = self.fan[-2]
+        wedge_right_target = self.fan[-1]
+
+        # While the newly added point is not to the right of the rightmost wedge, shrink the funnel
+        while orientation(wedge_origin, wedge_right_target, point) != 1:
+            # Remove the rightmost point from the fan
+            old_rightmost_point = self.fan.pop()
+            new_rightmost_point = self.fan[-1]
+
+            # If removed point was the apex, set new apex
+            if old_rightmost_point == self.apex:
+                self.apex = new_rightmost_point
+                self.tail.append(self.apex)
+
+            # If rightmost point is the apex, the rightmost wedge is on the left concave chain of the fan
+            if new_rightmost_point == self.apex:
+                # If fan consists of only one point, we cannot shrink the funnel any further
+                if len(self.fan) == 1:
+                    return
+                else:
+                    wedge_origin = new_rightmost_point
+                    wedge_right_target = self.fan[-2]
+
+            # Otherwise, the rightmost wedge is on the right concave chain of the fan
+            else:
+                wedge_origin = self.fan[-2]
+                wedge_right_target = new_rightmost_point
+
+        # Extend fan to the right
+        self.fan.append(point)
+
+    def __str__(self):
+        result = "Tail: "
+        for point in self.tail:
+            result += str(point) + " -> "
+
+        if len(self.tail) > 0:
+            result = result[:-4]
+        else:
+            result = result[:-1]
+
+        result += "\nFan: "
+        for point in self.fan:
+            result += str(point) + " -> "
+
+        if len(self.fan) > 0:
+            result = result[:-4]
+        else:
+            result = result[:-1]
+
+        return result
 
 
 class Homotopy:
@@ -126,27 +220,125 @@ class Homotopy:
 
         return reduced_sequence
 
+    def compute_funnel(self, sequence, edge):
+        """
+        Computes the funnel of the reduced crossing sequence through the Delaunay triangulation.
+
+        :param sequence: a list describing the reduced crossing sequence of the edge
+        :param edge: an Edge object
+        :returns the funnel of the edge
+        """
+        # If the reduced crossing sequence is empty, the shortest path is given by a straight-line edge
+        if len(sequence) == 0:
+            return Funnel([edge.v1, edge.v2], edge.v2, [])
+
+        # Add extra half-edge incident on v2 as 'crossing' to sequence to add v2 to the fan at the end
+        dt_v2 = self.dt.get_delaunay_vertex_from_point(edge.v2)
+        last_crossing = sequence[-1]
+        for he in dt_v2.outgoing_edges:
+            if he.target == last_crossing.target:
+                sequence.append(he)
+                break
+
+        current_crossing = sequence[0]
+
+        # Initialize funnel with v1 and first crossed half-edge
+        tail = [edge.v1]
+        apex = edge.v1
+        fan = [current_crossing.target, edge.v1, current_crossing.origin]
+        funnel = Funnel(tail, apex, fan)
+
+        i = 1
+
+        # Consider each crossing in turn
+        while i < len(sequence):
+            next_crossing = sequence[i]
+
+            # If fan consists of only one point, it is the apex
+            # This happens when the previous crossing caused the edge to leave the fan
+            # We then rebuild the fan starting from the first crossing not incident on the apex
+            # In other words, we build a new funnel as the previous one cannot be grown any further
+            if len(funnel.fan) == 1:
+                if next_crossing.origin != funnel.apex and next_crossing.target != funnel.apex:
+                    funnel.fan.appendleft(next_crossing.target)
+                    funnel.fan.append(next_crossing.origin)
+
+            # Otherwise, the next crossing differs in exactly one point from the current crossing
+            # We then contract the funnel accordingly from the left or right
+            else:
+                if current_crossing.origin == next_crossing.origin:
+                    new_point = next_crossing.target
+
+                    # Contract the funnel from the left inwards
+                    funnel.contract_left(new_point)
+                else:
+                    new_point = next_crossing.origin
+
+                    # Contract the funnel from the right inwards
+                    funnel.contract_right(new_point)
+
+            current_crossing = next_crossing
+            i += 1
+
+        return funnel
+
+    def compute_shortest_path(self, funnel, edge):
+        """
+        Computes the shortest path through the funnel.
+
+        :param funnel: a Funnel object corresponding to the edge
+        :param edge: an Edge object
+        :returns: a list describing the shortest homotopic path of the edge
+        """
+        # Initialize the shortest path as the tail of the funnel
+        shortest_path = funnel.tail
+
+        # If the fan is empty, the shortest path is given by the tail
+        if len(funnel.fan) == 0:
+            return shortest_path
+
+        found_apex = False
+
+        # If v2 is the leftmost point of the fan, the shortest path consists of the tail plus the left concave chain
+        if funnel.fan[0] == edge.v2:
+            while funnel.fan:
+                point = funnel.fan.pop()
+
+                if found_apex:
+                    shortest_path.append(point)
+                elif point == funnel.apex:
+                    found_apex = True
+
+        # Otherwise, the shortest path consists of the tail plus the right concave chain
+        else:
+            while funnel.fan:
+                point = funnel.fan.popleft()
+
+                if found_apex:
+                    shortest_path.append(point)
+                elif point == funnel.apex:
+                    found_apex = True
+
+        return shortest_path
+
     def compute_shortest_edges(self):
         """
         Computes the shortest homotopic edges.
+        Follows algorithm by Hershberger and Snoeyink (https://doi.org/10.1016/0925-7721(94)90010-8).
+        Better explanation: https://jeffe.cs.illinois.edu/teaching/compgeom/notes/05-shortest-homotopic.pdf.
         """
         for edge in self.instance.graph.edges:
-            print(f"\nEdge: {edge}")
             # Compute the crossing sequence of the edge
             sequence = self.compute_crossing_sequence(edge)
 
             # Reduce the crossing sequence
             reduced_sequence = self.reduce_crossing_sequence(sequence, edge)
 
-            print("Reduced crossing sequence:")
-            for e in reduced_sequence:
-                print(e)
-
             # Compute the funnel of the reduced crossing sequence
-            funnel = compute_funnel(reduced_sequence, edge)
+            funnel = self.compute_funnel(reduced_sequence, edge)
 
             # Compute the shortest path through the funnel
-            shortest_path = compute_shortest_path(funnel, edge)
+            shortest_path = self.compute_shortest_path(funnel, edge)
 
             # Assign the shortest homotopic path to the edge
             edge.path = shortest_path
