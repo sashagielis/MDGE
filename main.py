@@ -9,7 +9,8 @@ ipe_instances = {
         # 'Curve edge case',
         # 'Two lines edge case',
         # 'simplified_instance_from_report',
-        'Test'
+        'Test',
+        'Test 2'
     ],
     'general': [
         # 'instance_from_report',

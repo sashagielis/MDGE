@@ -65,6 +65,9 @@ class SimplifiedInstance(Instance):
         displacement_cost = displacer.execute()
         print(f"Displacement cost = {displacement_cost}")
 
+        for con in displacer.constraints:
+            print(con)
+
         # TODO: Recompute shortest homotopic edges
 
         # TODO: compute thick homotopic edges using growing algorithm

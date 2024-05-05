@@ -280,6 +280,11 @@ class Homotopy:
             current_crossing = next_crossing
             i += 1
 
+        # If the fan only consists of the apex, we empty the fan and add v2 to the tail
+        if len(funnel.fan) == 1:
+            funnel.fan.pop()
+            funnel.tail.append(edge.v2)
+
         return funnel
 
     def compute_shortest_path(self, funnel, edge):
@@ -288,7 +293,7 @@ class Homotopy:
 
         :param funnel: a Funnel object corresponding to the edge
         :param edge: an Edge object
-        :returns: a list describing the shortest homotopic path of the edge
+        :returns: a list of Point objects describing the shortest homotopic path of the edge
         """
         # Initialize the shortest path as the tail of the funnel
         shortest_path = funnel.tail
