@@ -8,9 +8,8 @@ ipe_instances = {
         # 'One line large',
         # 'Curve edge case',
         # 'Two lines edge case',
-        # 'simplified_instance_from_report',
-        'Test',
-        'Test 2'
+        'simplified_instance_from_report',
+        # 'Test',
     ],
     'general': [
         # 'instance_from_report',
@@ -42,7 +41,7 @@ def main():
 
         # Visualize output
         output_folder = f"{ipe_plot_folder}/output/{displacement_method} displacement"
-        visualize(instance, output_folder, True)
+        visualize(instance, output_folder, False, True)
 
 
 if __name__ == "__main__":

@@ -30,6 +30,7 @@ class ObstacleDisplacer:
                 # Assumes that o1, o2 and line segment pq are disjoint
                 total_thickness = 0
                 for edge in self.instance.graph.edges:
+                    # number_of_crossings = edge.sleeve.crossed_by(o1, o2)
                     for (p, q) in pairwise(edge.path):
                         if check_segment_segment_intersection(o1, o2, p, q) and not on_segment(o1, o2, p):
                             total_thickness += edge.thickness
@@ -51,15 +52,16 @@ class ObstacleDisplacer:
                 # Assumes that o and line segment pq are disjoint
                 total_thickness = 0
                 for edge in self.instance.graph.edges:
+                    # number_of_crossings = edge.sleeve.crossed_by(o, v)
                     for (p, q) in list(pairwise(edge.path)):
                         if check_segment_segment_intersection(o, v, p, q) and not (v == p or v == q) and not on_segment(o, v, p):
                             total_thickness += edge.thickness
 
                 # Add extra space to draw vertex
-                min_separation = total_thickness + v.diameter / 2
+                # min_separation = total_thickness + v.diameter / 2
 
                 # Create constraint
-                constraint = ObstacleVertexConstraint(o, v, min_separation)
+                constraint = ObstacleVertexConstraint(o, v, total_thickness)
                 self.constraints.append(constraint)
 
                 # If the constraint does not hold, mark it as conflict

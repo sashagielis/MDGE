@@ -86,7 +86,7 @@ def on_segment(p, q, r):
     """
     Determines whether point r lies on line segment pq.
     """
-    if max(p.x, q.x) >= r.x >= min(p.x, q.x) and max(p.y, q.y) >= r.y >= min(p.y, q.y):
+    if orientation(p, q, r) == 0 and min(p.x, q.x) <= r.x <= max(p.x, q.x) and min(p.y, q.y) <= r.y <= max(p.y, q.y):
         return True
 
     return False

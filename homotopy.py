@@ -117,6 +117,69 @@ class Funnel:
         return result
 
 
+# class Sleeve:
+#     def __init__(self, crossing_sequence, edge):
+#         self.crossing_sequence = crossing_sequence
+#         self.left_chain = [edge.v1]
+#         self.right_chain = [edge.v1]
+#
+#         if len(crossing_sequence) > 0:
+#             current_crossing = crossing_sequence[0]
+#
+#             self.left_chain.append(current_crossing.target)
+#             self.right_chain.append(current_crossing.origin)
+#
+#             i = 1
+#
+#             # Consider each crossing in turn
+#             while i < len(crossing_sequence):
+#                 next_crossing = crossing_sequence[i]
+#
+#                 if current_crossing.origin == next_crossing.origin:
+#                     self.left_chain.append(next_crossing.target)
+#                 else:
+#                     self.right_chain.append(next_crossing.origin)
+#
+#                 i += 1
+#
+#         self.left_chain.append(edge.v2)
+#         self.right_chain.append(edge.v2)
+#
+#     def crossed_by(self, p, q):
+#         left_chain_crossing_count = 0
+#         for (l1, l2) in pairwise(self.left_chain):
+#             if check_segment_segment_intersection(p, q, l1, l2) and not on_segment(p, q, l1):
+#                 left_chain_crossing_count += 1
+#
+#         right_chain_crossing_count = 0
+#         for (r1, r2) in pairwise(self.right_chain):
+#             if check_segment_segment_intersection(p, q, r1, r2) and not on_segment(p, q, r1):
+#                 right_chain_crossing_count += 1
+#
+#         return min(left_chain_crossing_count, right_chain_crossing_count)
+#
+#     def __str__(self):
+#         result = "Left chain: "
+#         for point in self.left_chain:
+#             result += f"{point} -> "
+#
+#         if len(self.left_chain) > 0:
+#             result = result[:-4]
+#         else:
+#             result = result[:-1]
+#
+#         result += "\nRight chain: "
+#         for point in self.right_chain:
+#             result += f"{point} -> "
+#
+#         if len(self.right_chain) > 0:
+#             result = result[:-4]
+#         else:
+#             result = result[:-1]
+#
+#         return result
+
+
 class Homotopy:
     def __init__(self, instance):
         """
@@ -209,7 +272,7 @@ class Homotopy:
         dt_v1 = self.dt.get_delaunay_vertex_from_point(edge.v1)
         dt_v2 = self.dt.get_delaunay_vertex_from_point(edge.v2)
 
-        # Remove redundant edge links incident to vertices
+        # Remove redundant edge links incident on vertices
         while reduced_sequence:
             if any(e in dt_v1.outgoing_edges for e in [reduced_sequence[0], reduced_sequence[0].twin]):
                 reduced_sequence.pop(0)
@@ -280,10 +343,11 @@ class Homotopy:
             current_crossing = next_crossing
             i += 1
 
-        # If the fan only consists of the apex, we empty the fan and add v2 to the tail
+        # If fan consists of only one point, it does not contain v2 as v2 cannot be the apex
+        # This is because the last contraction of the funnel was with respect to v2
+        # Therefore, we add v2 to the fan
         if len(funnel.fan) == 1:
-            funnel.fan.pop()
-            funnel.tail.append(edge.v2)
+            funnel.fan.append(edge.v2)
 
         return funnel
 
@@ -338,6 +402,8 @@ class Homotopy:
 
             # Reduce the crossing sequence
             reduced_sequence = self.reduce_crossing_sequence(sequence, edge)
+
+            # edge.sleeve = Sleeve(reduced_sequence, edge)
 
             # Compute the funnel of the reduced crossing sequence
             funnel = self.compute_funnel(reduced_sequence, edge)

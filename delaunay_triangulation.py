@@ -111,7 +111,6 @@ class DelaunayTriangulation:
 
         # Construct Delaunay vertices corresponding to the vertices and obstacles
         dt_vertices = [DelaunayVertex(vertex) for vertex in self.instance.graph.vertices]
-        dt_obstacles = [DelaunayVertex(obstacle) for obstacle in self.instance.obstacles]
 
         # Construct Delaunay vertices corresponding to a bounding box of the instance
         dt_bb_tl_vertex = DelaunayVertex(Point(self.instance.min_x - 1, self.instance.max_y + 1))
@@ -120,7 +119,23 @@ class DelaunayTriangulation:
         dt_bb_bl_vertex = DelaunayVertex(Point(self.instance.min_x - 1, self.instance.min_y - 1))
         dt_bounding_box_vertices = [dt_bb_tl_vertex, dt_bb_tr_vertex, dt_bb_br_vertex, dt_bb_bl_vertex]
 
-        self.vertices = dt_vertices + dt_obstacles + dt_bounding_box_vertices
+        # Construct Delaunay vertices corresponding to a small bounding box for each vertex and point obstacle
+        # This helps with identifying the homotopy of the edges, i.e., along which sides of the obstacles an edge moves
+        delta = 0.0001
+
+        dt_vbox_tl_vertices = [DelaunayVertex(Point(vertex.x - delta, vertex.y + delta)) for vertex in self.instance.graph.vertices]
+        dt_vbox_tr_vertices = [DelaunayVertex(Point(vertex.x + delta, vertex.y + delta)) for vertex in self.instance.graph.vertices]
+        dt_vbox_br_vertices = [DelaunayVertex(Point(vertex.x + delta, vertex.y - delta)) for vertex in self.instance.graph.vertices]
+        dt_vbox_bl_vertices = [DelaunayVertex(Point(vertex.x - delta, vertex.y - delta)) for vertex in self.instance.graph.vertices]
+        vbox_vertices = dt_vbox_tl_vertices + dt_vbox_tr_vertices + dt_vbox_br_vertices + dt_vbox_bl_vertices
+
+        dt_obox_tl_vertices = [DelaunayVertex(Point(obstacle.x - delta, obstacle.y + delta)) for obstacle in self.instance.obstacles]
+        dt_obox_tr_vertices = [DelaunayVertex(Point(obstacle.x + delta, obstacle.y + delta)) for obstacle in self.instance.obstacles]
+        dt_obox_br_vertices = [DelaunayVertex(Point(obstacle.x + delta, obstacle.y - delta)) for obstacle in self.instance.obstacles]
+        dt_obox_bl_vertices = [DelaunayVertex(Point(obstacle.x - delta, obstacle.y - delta)) for obstacle in self.instance.obstacles]
+        obox_vertices = dt_obox_tl_vertices + dt_obox_tr_vertices + dt_obox_br_vertices + dt_obox_bl_vertices
+
+        self.vertices = dt_vertices + dt_bounding_box_vertices + vbox_vertices + obox_vertices
 
         # Compute the Delaunay triangulation
         dt_input_points = np.array([[float(vertex.x), float(vertex.y)] for vertex in self.vertices])
