@@ -10,6 +10,7 @@ ipe_instances = {
         # 'Two lines edge case',
         'simplified_instance_from_report',
         # 'Test',
+        # 'Test 2'
     ],
     'general': [
         # 'instance_from_report',
@@ -29,9 +30,7 @@ def main():
         input_folder = f"{ipe_plot_folder}/input"
         visualize(instance, input_folder, False, True, True)
 
-        # Test visualization large vertices and thick edges
-        # for vertex in instance.graph.vertices:
-        #     vertex.diameter = 100
+        # Set edge thicknesses
         for edge in instance.graph.edges:
             edge.thickness = edge.weight
 

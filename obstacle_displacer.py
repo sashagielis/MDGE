@@ -30,10 +30,11 @@ class ObstacleDisplacer:
                 # Assumes that o1, o2 and line segment pq are disjoint
                 total_thickness = 0
                 for edge in self.instance.graph.edges:
-                    # number_of_crossings = edge.sleeve.crossed_by(o1, o2)
                     for (p, q) in pairwise(edge.path):
-                        if check_segment_segment_intersection(o1, o2, p, q) and not on_segment(o1, o2, p):
-                            total_thickness += edge.thickness
+                        if check_segment_segment_intersection(o1, o2, p, q):
+                            # Prevent double counting of intersections in a bend
+                            if p == edge.v1 or not on_segment(o1, o2, p):
+                                total_thickness += edge.thickness
 
                 # Create constraint
                 constraint = ObstaclePairConstraint(o1, o2, total_thickness)
@@ -52,10 +53,11 @@ class ObstacleDisplacer:
                 # Assumes that o and line segment pq are disjoint
                 total_thickness = 0
                 for edge in self.instance.graph.edges:
-                    # number_of_crossings = edge.sleeve.crossed_by(o, v)
                     for (p, q) in list(pairwise(edge.path)):
-                        if check_segment_segment_intersection(o, v, p, q) and not (v == p or v == q) and not on_segment(o, v, p):
-                            total_thickness += edge.thickness
+                        if check_segment_segment_intersection(o, v, p, q):
+                            # Do not consider link incident on v and prevent double counting of intersections in a bend
+                            if not (v == p or v == q) and not on_segment(o, v, p):
+                                total_thickness += edge.thickness
 
                 # Add extra space to draw vertex
                 # min_separation = total_thickness + v.diameter / 2
@@ -96,6 +98,10 @@ class ObstacleDisplacer:
         """
         # Compute minimum separation constraints
         self.compute_constraints_naive()
+
+        print("Constraints:")
+        for con in self.constraints:
+            print(con)
 
         # Displace the obstacles
         self.displace_obstacles()

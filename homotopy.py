@@ -117,67 +117,202 @@ class Funnel:
         return result
 
 
-# class Sleeve:
-#     def __init__(self, crossing_sequence, edge):
-#         self.crossing_sequence = crossing_sequence
-#         self.left_chain = [edge.v1]
-#         self.right_chain = [edge.v1]
-#
-#         if len(crossing_sequence) > 0:
-#             current_crossing = crossing_sequence[0]
-#
-#             self.left_chain.append(current_crossing.target)
-#             self.right_chain.append(current_crossing.origin)
-#
-#             i = 1
-#
-#             # Consider each crossing in turn
-#             while i < len(crossing_sequence):
-#                 next_crossing = crossing_sequence[i]
-#
-#                 if current_crossing.origin == next_crossing.origin:
-#                     self.left_chain.append(next_crossing.target)
-#                 else:
-#                     self.right_chain.append(next_crossing.origin)
-#
-#                 i += 1
-#
-#         self.left_chain.append(edge.v2)
-#         self.right_chain.append(edge.v2)
-#
-#     def crossed_by(self, p, q):
-#         left_chain_crossing_count = 0
-#         for (l1, l2) in pairwise(self.left_chain):
-#             if check_segment_segment_intersection(p, q, l1, l2) and not on_segment(p, q, l1):
-#                 left_chain_crossing_count += 1
-#
-#         right_chain_crossing_count = 0
-#         for (r1, r2) in pairwise(self.right_chain):
-#             if check_segment_segment_intersection(p, q, r1, r2) and not on_segment(p, q, r1):
-#                 right_chain_crossing_count += 1
-#
-#         return min(left_chain_crossing_count, right_chain_crossing_count)
-#
-#     def __str__(self):
-#         result = "Left chain: "
-#         for point in self.left_chain:
-#             result += f"{point} -> "
-#
-#         if len(self.left_chain) > 0:
-#             result = result[:-4]
-#         else:
-#             result = result[:-1]
-#
-#         result += "\nRight chain: "
-#         for point in self.right_chain:
-#             result += f"{point} -> "
-#
-#         if len(self.right_chain) > 0:
-#             result = result[:-4]
-#         else:
-#             result = result[:-1]
-#
-#         return result
+def compute_initial_triangle(edge):
+    """
+    Computes the first triangle of the Delaunay triangulation that the edge moves through.
+    Edge links located on the boundary of a triangle are not considered to be moving 'through' the triangle.
+
+    :param edge: an Edge object
+    :returns: the first triangle and the index of the first edge link moving through the triangle
+    """
+    # Retrieve Delaunay vertex corresponding to first edge vertex
+    i = 0
+
+    # Find the first edge link that moves through a triangle adjacent to v1
+    while i < len(edge.path) - 1:
+        target = edge.path[i + 1]
+
+        # For each triangle adjacent to v1, check if it contains the edge link
+        for dt_edge in edge.v1.outgoing_edges:
+            if dt_edge.orientation(target) == dt_edge.prev.orientation(target) == 2:
+                return dt_edge.triangle, i
+
+        i += 1
+
+    return None, i
+
+
+def compute_crossing_sequence(edge):
+    """
+    Computes the (unreduced) sequence of half-edges of the Delaunay triangulation crossed by the edge.
+    Only records the half-edges that are crossed when exiting their corresponding triangle.
+
+    :param edge: an Edge object
+    :returns: a list describing the crossing sequence of the edge
+    """
+    sequence = []
+
+    # Compute initial triangle and index of first edge link moving 'through' the triangle
+    current_triangle, i = compute_initial_triangle(edge)
+
+    # Iterate over the edge links and record crossings
+    while i < len(edge.path) - 1:
+        p1 = edge.path[i]
+        p2 = edge.path[i + 1]
+
+        # Compute which half-edge of the current triangle is crossed by the edge link
+        crossed_dt_edge = current_triangle.exited_by(p1, p2)
+
+        # If no edge was crossed, consider the next edge link
+        # Otherwise, repeat the following until the edge link does not cross the current triangle:
+        #   (1) add the crossed edge to the crossing sequence
+        #   (2) update the current triangle
+        #   (3) compute which half-edge of the current triangle is crossed by the edge link
+        while crossed_dt_edge is not None:
+            sequence.append(crossed_dt_edge)
+            current_triangle = crossed_dt_edge.twin.triangle
+            crossed_dt_edge = current_triangle.exited_by(p1, p2)
+
+        i += 1
+
+    return sequence
+
+
+def reduce_crossing_sequence(sequence, edge):
+    """
+    Reduces the crossing sequence of an edge to its minimum homotopic equivalent.
+
+    :param sequence: a list describing the crossing sequence of the edge
+    :param edge: an Edge object
+    :returns: a list describing the reduced crossing sequence of the edge
+    """
+    reduced_sequence = []
+
+    # Iteratively remove adjacent pairs of equivalent crossings
+    for he in sequence:
+        if reduced_sequence and reduced_sequence[-1] == he.twin:
+            reduced_sequence.pop()
+        else:
+            reduced_sequence.append(he)
+
+    # Remove redundant edge links incident on vertices
+    while reduced_sequence:
+        if any(e in edge.v1.outgoing_edges for e in [reduced_sequence[0], reduced_sequence[0].twin]):
+            reduced_sequence.pop(0)
+        elif any(e in edge.v2.outgoing_edges for e in [reduced_sequence[-1], reduced_sequence[-1].twin]):
+            reduced_sequence.pop()
+        else:
+            break
+
+    return reduced_sequence
+
+
+def compute_funnel(sequence, edge):
+    """
+    Computes the funnel of the reduced crossing sequence through the Delaunay triangulation.
+
+    :param sequence: a list describing the reduced crossing sequence of the edge
+    :param edge: an Edge object
+    :returns the funnel of the edge
+    """
+    # If the reduced crossing sequence is empty, the shortest path is given by a straight-line edge
+    if len(sequence) == 0:
+        return Funnel([edge.v1, edge.v2], edge.v2, [])
+
+    # Add extra half-edge incident on v2 as 'crossing' to sequence to add v2 to the fan at the end
+    last_crossing = sequence[-1]
+    for he in edge.v2.outgoing_edges:
+        if he.target == last_crossing.target:
+            sequence.append(he)
+            break
+
+    current_crossing = sequence[0]
+
+    # Initialize funnel with v1 and first crossed half-edge
+    tail = [edge.v1]
+    apex = edge.v1
+    fan = [current_crossing.target, edge.v1, current_crossing.origin]
+    funnel = Funnel(tail, apex, fan)
+
+    i = 1
+
+    # Consider each crossing in turn
+    while i < len(sequence):
+        next_crossing = sequence[i]
+
+        # If fan consists of only one point, it is the apex
+        # This happens when the previous crossing caused the edge to leave the fan
+        # We then rebuild the fan starting from the first crossing not incident on the apex
+        # In other words, we build a new funnel as the previous one cannot be grown any further
+        if len(funnel.fan) == 1:
+            if next_crossing.origin != funnel.apex and next_crossing.target != funnel.apex:
+                funnel.fan.appendleft(next_crossing.target)
+                funnel.fan.append(next_crossing.origin)
+
+        # Otherwise, the next crossing differs in exactly one point from the current crossing
+        # We then contract the funnel accordingly from the left or right
+        else:
+            if current_crossing.origin == next_crossing.origin:
+                new_point = next_crossing.target
+
+                # Contract the funnel from the left inwards
+                funnel.contract_left(new_point)
+            else:
+                new_point = next_crossing.origin
+
+                # Contract the funnel from the right inwards
+                funnel.contract_right(new_point)
+
+        current_crossing = next_crossing
+        i += 1
+
+    # If fan consists of only one point, it does not contain v2 as v2 cannot be the apex
+    # This is because the last contraction of the funnel was with respect to v2
+    # Therefore, we add v2 to the fan
+    if len(funnel.fan) == 1:
+        funnel.fan.append(edge.v2)
+
+    return funnel
+
+
+def compute_shortest_path(funnel, edge):
+    """
+    Computes the shortest path through the funnel.
+
+    :param funnel: a Funnel object corresponding to the edge
+    :param edge: an Edge object
+    :returns: a list of Point objects describing the shortest homotopic path of the edge
+    """
+    # Initialize the shortest path as the tail of the funnel
+    shortest_path = funnel.tail
+
+    # If the fan is empty, the shortest path is given by the tail
+    if len(funnel.fan) == 0:
+        return shortest_path
+
+    found_apex = False
+
+    # If v2 is the leftmost point of the fan, the shortest path consists of the tail plus the left concave chain
+    if funnel.fan[0] == edge.v2:
+        while funnel.fan:
+            point = funnel.fan.pop()
+
+            if found_apex:
+                shortest_path.append(point)
+            elif point == funnel.apex:
+                found_apex = True
+
+    # Otherwise, the shortest path consists of the tail plus the right concave chain
+    else:
+        while funnel.fan:
+            point = funnel.fan.popleft()
+
+            if found_apex:
+                shortest_path.append(point)
+            elif point == funnel.apex:
+                found_apex = True
+
+    return shortest_path
 
 
 class Homotopy:
@@ -187,229 +322,27 @@ class Homotopy:
         """
         self.instance = instance
 
-        # Compute the Delaunay triangulation on the vertices and obstacles
+        # Compute Delaunay triangulation on the vertices and obstacles
         self.dt = DelaunayTriangulation(self.instance)
-
-    def compute_initial_triangle(self, edge):
-        """
-        Computes the first triangle of the Delaunay triangulation that the edge moves through.
-        Edge links located on the boundary of a triangle are not considered to be moving 'through' the triangle.
-
-        :param edge: an Edge object
-        :returns: the first triangle and the index of the first edge link moving through the triangle
-        """
-        # Retrieve Delaunay vertex corresponding to first edge vertex
-        dt_v1 = self.dt.get_delaunay_vertex_from_point(edge.v1)
-
-        i = 0
-
-        # Find the first edge link that moves through a triangle adjacent to v1
-        while i < len(edge.path) - 1:
-            target = edge.path[i + 1]
-
-            # For each triangle adjacent to v1, check if it contains the edge link
-            for dt_edge in dt_v1.outgoing_edges:
-                if dt_edge.orientation(target) == dt_edge.prev.orientation(target) == 2:
-                    return dt_edge.face, i
-
-            i += 1
-
-        return None, i
-
-    def compute_crossing_sequence(self, edge):
-        """
-        Computes the (unreduced) sequence of half-edges of the Delaunay triangulation crossed by the edge.
-        Only records the half-edges that are crossed when exiting their corresponding triangle.
-
-        :param edge: an Edge object
-        :returns: a list describing the crossing sequence of the edge
-        """
-        sequence = []
-
-        # Compute initial triangle and index of first edge link moving 'through' the triangle
-        current_triangle, i = self.compute_initial_triangle(edge)
-
-        # Iterate over the edge links and record crossings
-        while i < len(edge.path) - 1:
-            p1 = edge.path[i]
-            p2 = edge.path[i + 1]
-
-            # Compute which half-edge of the current triangle is crossed by the edge link
-            crossed_dt_edge = current_triangle.exited_by(p1, p2)
-
-            # If no edge was crossed, consider the next edge link
-            # Otherwise, repeat the following until the edge link does not cross the current triangle:
-            #   (1) add the crossed edge to the crossing sequence
-            #   (2) update the current triangle
-            #   (3) compute which half-edge of the current triangle is crossed by the edge link
-            while crossed_dt_edge is not None:
-                sequence.append(crossed_dt_edge)
-                current_triangle = crossed_dt_edge.twin.face
-                crossed_dt_edge = current_triangle.exited_by(p1, p2)
-
-            i += 1
-
-        return sequence
-
-    def reduce_crossing_sequence(self, sequence, edge):
-        """
-        Reduces the crossing sequence of an edge to its minimum homotopic equivalent.
-
-        :param sequence: a list describing the crossing sequence of the edge
-        :param edge: an Edge object
-        :returns: a list describing the reduced crossing sequence of the edge
-        """
-        reduced_sequence = []
-
-        # Iteratively remove adjacent pairs of equivalent crossings
-        for he in sequence:
-            if reduced_sequence and reduced_sequence[-1] == he.twin:
-                reduced_sequence.pop()
-            else:
-                reduced_sequence.append(he)
-
-        # Retrieve Delaunay vertices corresponding to edge vertices
-        dt_v1 = self.dt.get_delaunay_vertex_from_point(edge.v1)
-        dt_v2 = self.dt.get_delaunay_vertex_from_point(edge.v2)
-
-        # Remove redundant edge links incident on vertices
-        while reduced_sequence:
-            if any(e in dt_v1.outgoing_edges for e in [reduced_sequence[0], reduced_sequence[0].twin]):
-                reduced_sequence.pop(0)
-            elif any(e in dt_v2.outgoing_edges for e in [reduced_sequence[-1], reduced_sequence[-1].twin]):
-                reduced_sequence.pop()
-            else:
-                break
-
-        return reduced_sequence
-
-    def compute_funnel(self, sequence, edge):
-        """
-        Computes the funnel of the reduced crossing sequence through the Delaunay triangulation.
-
-        :param sequence: a list describing the reduced crossing sequence of the edge
-        :param edge: an Edge object
-        :returns the funnel of the edge
-        """
-        # If the reduced crossing sequence is empty, the shortest path is given by a straight-line edge
-        if len(sequence) == 0:
-            return Funnel([edge.v1, edge.v2], edge.v2, [])
-
-        # Add extra half-edge incident on v2 as 'crossing' to sequence to add v2 to the fan at the end
-        dt_v2 = self.dt.get_delaunay_vertex_from_point(edge.v2)
-        last_crossing = sequence[-1]
-        for he in dt_v2.outgoing_edges:
-            if he.target == last_crossing.target:
-                sequence.append(he)
-                break
-
-        current_crossing = sequence[0]
-
-        # Initialize funnel with v1 and first crossed half-edge
-        tail = [edge.v1]
-        apex = edge.v1
-        fan = [current_crossing.target, edge.v1, current_crossing.origin]
-        funnel = Funnel(tail, apex, fan)
-
-        i = 1
-
-        # Consider each crossing in turn
-        while i < len(sequence):
-            next_crossing = sequence[i]
-
-            # If fan consists of only one point, it is the apex
-            # This happens when the previous crossing caused the edge to leave the fan
-            # We then rebuild the fan starting from the first crossing not incident on the apex
-            # In other words, we build a new funnel as the previous one cannot be grown any further
-            if len(funnel.fan) == 1:
-                if next_crossing.origin != funnel.apex and next_crossing.target != funnel.apex:
-                    funnel.fan.appendleft(next_crossing.target)
-                    funnel.fan.append(next_crossing.origin)
-
-            # Otherwise, the next crossing differs in exactly one point from the current crossing
-            # We then contract the funnel accordingly from the left or right
-            else:
-                if current_crossing.origin == next_crossing.origin:
-                    new_point = next_crossing.target
-
-                    # Contract the funnel from the left inwards
-                    funnel.contract_left(new_point)
-                else:
-                    new_point = next_crossing.origin
-
-                    # Contract the funnel from the right inwards
-                    funnel.contract_right(new_point)
-
-            current_crossing = next_crossing
-            i += 1
-
-        # If fan consists of only one point, it does not contain v2 as v2 cannot be the apex
-        # This is because the last contraction of the funnel was with respect to v2
-        # Therefore, we add v2 to the fan
-        if len(funnel.fan) == 1:
-            funnel.fan.append(edge.v2)
-
-        return funnel
-
-    def compute_shortest_path(self, funnel, edge):
-        """
-        Computes the shortest path through the funnel.
-
-        :param funnel: a Funnel object corresponding to the edge
-        :param edge: an Edge object
-        :returns: a list of Point objects describing the shortest homotopic path of the edge
-        """
-        # Initialize the shortest path as the tail of the funnel
-        shortest_path = funnel.tail
-
-        # If the fan is empty, the shortest path is given by the tail
-        if len(funnel.fan) == 0:
-            return shortest_path
-
-        found_apex = False
-
-        # If v2 is the leftmost point of the fan, the shortest path consists of the tail plus the left concave chain
-        if funnel.fan[0] == edge.v2:
-            while funnel.fan:
-                point = funnel.fan.pop()
-
-                if found_apex:
-                    shortest_path.append(point)
-                elif point == funnel.apex:
-                    found_apex = True
-
-        # Otherwise, the shortest path consists of the tail plus the right concave chain
-        else:
-            while funnel.fan:
-                point = funnel.fan.popleft()
-
-                if found_apex:
-                    shortest_path.append(point)
-                elif point == funnel.apex:
-                    found_apex = True
-
-        return shortest_path
 
     def compute_shortest_edges(self):
         """
         Computes the shortest homotopic edges.
         Follows algorithm by Hershberger and Snoeyink (https://doi.org/10.1016/0925-7721(94)90010-8).
-        Better explanation: https://jeffe.cs.illinois.edu/teaching/compgeom/notes/05-shortest-homotopic.pdf.
+        More detailed explanation: https://jeffe.cs.illinois.edu/teaching/compgeom/notes/05-shortest-homotopic.pdf.
         """
         for edge in self.instance.graph.edges:
             # Compute the crossing sequence of the edge
-            sequence = self.compute_crossing_sequence(edge)
+            sequence = compute_crossing_sequence(edge)
 
             # Reduce the crossing sequence
-            reduced_sequence = self.reduce_crossing_sequence(sequence, edge)
-
-            # edge.sleeve = Sleeve(reduced_sequence, edge)
+            reduced_sequence = reduce_crossing_sequence(sequence, edge)
 
             # Compute the funnel of the reduced crossing sequence
-            funnel = self.compute_funnel(reduced_sequence, edge)
+            funnel = compute_funnel(reduced_sequence, edge)
 
             # Compute the shortest path through the funnel
-            shortest_path = self.compute_shortest_path(funnel, edge)
+            shortest_path = compute_shortest_path(funnel, edge)
 
             # Assign the shortest homotopic path to the edge
             edge.path = shortest_path

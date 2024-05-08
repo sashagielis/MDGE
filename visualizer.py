@@ -64,7 +64,7 @@ def visualize(instance, folder, thick_edges=True, show_axes=False, show_delaunay
     # Draw obstacles
     for obstacle in instance.obstacles:
         if type(obstacle) == PointObstacle:
-            plot.circle(float(obstacle.x), float(obstacle.y), radius=min_point_diameter/2, color=obstacle.fill_color)
+            plot.circle(float(obstacle.x), float(obstacle.y), color=obstacle.fill_color)
         else:
             path = obstacle.path
             xs = [float(p.x) for p in path]
@@ -73,8 +73,8 @@ def visualize(instance, folder, thick_edges=True, show_axes=False, show_delaunay
 
     # Draw vertices
     for vertex in instance.graph.vertices:
-        size = vertex.diameter if thick_edges else min_point_diameter
-        plot.circle(float(vertex.x), float(vertex.y), radius=size/2, color=vertex.color)
+        # size = vertex.diameter if thick_edges else min_point_diameter
+        plot.circle(float(vertex.x), float(vertex.y), color=vertex.color)
 
     if show_delaunay:
         dt = DelaunayTriangulation(instance)
@@ -83,8 +83,8 @@ def visualize(instance, folder, thick_edges=True, show_axes=False, show_delaunay
         xs = []
         ys = []
         for triangle in dt.dt.simplices:
-            xs.append([[[float(dt.vertices[i].x) for i in triangle]]])
-            ys.append([[[float(dt.vertices[i].y) for i in triangle]]])
+            xs.append([[[float(dt.points[i].x) for i in triangle]]])
+            ys.append([[[float(dt.points[i].y) for i in triangle]]])
         plot.multi_polygons(xs, ys, line_color='black', fill_alpha=0)
 
     # Save plot as png
