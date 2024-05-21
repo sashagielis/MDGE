@@ -1,24 +1,42 @@
+from enum import Enum
 from itertools import pairwise
 
 from constraint import ObstaclePairConstraint, ObstacleVertexConstraint
 from utils import check_segment_segment_intersection, distance, on_segment
 
 
+class Displacer(Enum):
+    """
+    The displacer used for displacing the obstacles.
+    """
+    SCIPY = 1  # The ScipyDisplacer
+    OPTIMAL = 2  # The OptimalDisplacer
+    DIAMOND = 3  # The DiamondDisplacer
+
+
+class Objective(Enum):
+    """
+    The objective function to be minimized.
+    """
+    MAX = 1  # The maximum displacement
+    TOTAL = 2  # The total displacement
+
+
 class ObstacleDisplacer:
-    def __init__(self, instance):
+    def __init__(self, instance, objective):
         """
         :param instance: a SimplifiedInstance object
+        :param objective: an Objective object
         """
         self.instance = instance
+        self.objective = objective
         self.constraints = []
-        self.conflicts = []
 
     def compute_constraints_naive(self):
         """
         Computes the minimum separation constraints on all obstacle and obstacle-vertex pairs.
         """
         self.constraints = []
-        self.conflicts = []
         for i in range(len(self.instance.obstacles)):
             # Create obstacle pair constraints
             for j in range(i + 1, len(self.instance.obstacles)):
@@ -39,10 +57,6 @@ class ObstacleDisplacer:
                 # Create constraint
                 constraint = ObstaclePairConstraint(o1, o2, total_thickness)
                 self.constraints.append(constraint)
-
-                # If the constraint does not hold, mark it as conflict
-                if constraint.value > 0:
-                    self.conflicts.append(constraint)
 
             # Create obstacle-vertex constraints
             for v in self.instance.graph.vertices:
@@ -66,13 +80,10 @@ class ObstacleDisplacer:
                 constraint = ObstacleVertexConstraint(o, v, total_thickness)
                 self.constraints.append(constraint)
 
-                # If the constraint does not hold, mark it as conflict
-                if constraint.value > 0:
-                    self.conflicts.append(constraint)
-
     def displace_obstacles(self):
         """
-        Displacers should implement this method to displace the obstacles.
+        Computes new obstacle positions by minimizing objective subject to minimum separation constraints.
+        Displacers should implement this method.
         """
         raise Exception(f"Method displace_obstacles not implemented for {type(self).__name__}")
 
@@ -88,9 +99,14 @@ class ObstacleDisplacer:
 
     def compute_cost(self):
         """
-        Computes the maximum displacement over all obstacles.
+        Computes the cost of the objective to be minimized.
         """
-        return max(distance(obstacle, obstacle.original_position) for obstacle in self.instance.obstacles)
+        if self.objective == Objective.MAX:
+            return max(distance(obstacle, obstacle.original_position) for obstacle in self.instance.obstacles)
+        elif self.objective == Objective.TOTAL:
+            return sum(distance(obstacle, obstacle.original_position) for obstacle in self.instance.obstacles)
+        else:
+            return None
 
     def execute(self):
         """

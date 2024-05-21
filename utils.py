@@ -47,6 +47,13 @@ def vector_length(p):
     return math.sqrt(p.x ** 2 + p.y ** 2)
 
 
+def dot(p, q):
+    """
+    Determines the dot product between vectors p and q.
+    """
+    return p.x * q.x + p.y * q.y
+
+
 def vector_bisector(p, q):
     """
     Determines the bisector of vectors p and q, which is orthogonal and to the left of p if they are opposite vectors.

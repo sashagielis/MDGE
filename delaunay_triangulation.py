@@ -66,7 +66,7 @@ class Triangle:
 
         :param p: a Point object
         :param q: a Point object
-        :returns: the crossed half-edge, or None if pq does not exit the triangle
+        :returns: the crossed half-edge (either if crossed in a node), or None if pq does not exit the triangle
         """
         for he in self.half_edges:
             if (he.intersects(p, q)

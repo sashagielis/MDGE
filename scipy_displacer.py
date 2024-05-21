@@ -4,22 +4,7 @@ from functools import partial
 from scipy.optimize import minimize
 
 from constraint import ObstaclePairConstraint
-from obstacle_displacer import ObstacleDisplacer
-from point import Point
-
-
-def objective(new_obstacles, old_obstacles):
-    """
-    The objective function to be minimized, i.e., the maximum obstacle displacement.
-
-    :param new_obstacles: flat list of new obstacle coordinates [x'1, y'1, x'2, y'2, ..., x'n, y'n]
-    :param old_obstacles: flat list of old obstacle coordinates [x1, y1, x2, y2, ..., xn, yn]
-    :returns: the value of the objective function
-    """
-    dxs = [new_obstacles[i] - old_obstacles[i] for i in range(0, len(new_obstacles), 2)]
-    dys = [new_obstacles[i] - old_obstacles[i] for i in range(1, len(new_obstacles), 2)]
-
-    return max(math.sqrt(dx ** 2 + dy ** 2) for dx, dy in zip(dxs, dys))
+from obstacle_displacer import ObstacleDisplacer, Objective
 
 
 def obstacle_pair_constraint(new_obstacles, index1, index2, min_sep):
@@ -62,16 +47,35 @@ def obstacle_vertex_constraint(new_obstacles, index, vertex, min_sep):
 
 
 class ScipyDisplacer(ObstacleDisplacer):
-    def __init__(self, instance):
+    def __init__(self, instance, objective):
         """
         :param instance: a SimplifiedInstance object
+        :param objective: an Objective object
         """
-        super().__init__(instance)
+        super().__init__(instance, objective)
+
+    def objective_function(self, new_obstacles, old_obstacles):
+        """
+        The objective function to be minimized.
+
+        :param new_obstacles: flat list of new obstacle coordinates [x'1, y'1, x'2, y'2, ..., x'n, y'n]
+        :param old_obstacles: flat list of old obstacle coordinates [x1, y1, x2, y2, ..., xn, yn]
+        :returns: the value of the objective function
+        """
+        dxs = [new_obstacles[i] - old_obstacles[i] for i in range(0, len(new_obstacles), 2)]
+        dys = [new_obstacles[i] - old_obstacles[i] for i in range(1, len(new_obstacles), 2)]
+
+        if self.objective == Objective.MAX:
+            return max(math.sqrt(dx ** 2 + dy ** 2) for dx, dy in zip(dxs, dys))
+        elif self.objective == Objective.TOTAL:
+            return sum(math.sqrt(dx ** 2 + dy ** 2) for dx, dy in zip(dxs, dys))
+        else:
+            raise Exception(f"Objective {self.objective.name} not implemented for {type(self).__name__}")
 
     def displace_obstacles(self):
         """
-        Computes new obstacle positions by minimizing maximum displacement subject to minimum separation constraints.
-        Uses SciPy optimization, which is fast but computes a local optimum.
+        Computes locally optimal obstacle positions using SciPy optimization.
+        SciPy is fast but computes a local optimum.
 
         :returns: the final value of the objective function
         """
@@ -101,7 +105,7 @@ class ScipyDisplacer(ObstacleDisplacer):
         initial_obstacles = [coordinate for o in self.instance.obstacles for coordinate in [o.x, o.y]]
 
         # Apply optimization to compute new obstacle positions
-        result = minimize(objective, initial_obstacles, args=initial_obstacles, method='SLSQP', constraints=cons)
+        result = minimize(self.objective_function, initial_obstacles, args=initial_obstacles, method='SLSQP', constraints=cons)
 
         # Assign computed positions to obstacles
         flat_new_obstacles = result['x']

@@ -1,12 +1,11 @@
 import os
 
 from diamond_displacer import DiamondDisplacer
-from gurobi_displacer import GurobiDisplacer
 from homotopy import Homotopy
-from iterative_displacer import IterativeDisplacer
 from input_parser import read_ipe_instance
+from obstacle_displacer import Displacer
+from optimal_displacer import OptimalDisplacer
 from scipy_displacer import ScipyDisplacer
-from sweep_displacer import SweepDisplacer
 
 
 class Instance:
@@ -42,24 +41,26 @@ class SimplifiedInstance(Instance):
     def __init__(self, instance_name, file):
         super().__init__(instance_name, file)
 
-    def solve(self, displacement_method):
+    def solve(self, displacement_method, objective):
+        """
+        Solves the instance.
+
+        :param displacement_method: a Displacer object specifying the ObstacleDisplacer to displace the obstacles
+        :param objective: an Objective object specifying the objective function to be minimized
+        """
         # Compute shortest homotopic edges
         homotopy = Homotopy(self)
         homotopy.compute_shortest_edges()
 
-        # Choose displacement method
-        if displacement_method == 'scipy':
-            displacer = ScipyDisplacer(self)
-        elif displacement_method == 'gurobi':
-            displacer = GurobiDisplacer(self)
-        elif displacement_method == 'iterative':
-            displacer = IterativeDisplacer(self)
-        elif displacement_method == 'sweep':
-            displacer = SweepDisplacer(self)
-        elif displacement_method == 'diamond':
-            displacer = DiamondDisplacer(self)
+        # Choose ObstacleDisplacer
+        if displacement_method == Displacer.SCIPY:
+            displacer = ScipyDisplacer(self, objective)
+        elif displacement_method == Displacer.OPTIMAL:
+            displacer = OptimalDisplacer(self, objective)
+        elif displacement_method == Displacer.DIAMOND:
+            displacer = DiamondDisplacer(self, objective)
         else:
-            exit()
+            raise Exception(f"Displacement method {displacement_method.name} not implemented")
 
         # Displace the obstacles
         displacement_cost = displacer.execute()
