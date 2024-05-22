@@ -5,13 +5,13 @@ from visualizer import visualize
 # IPE instances
 ipe_instances = {
     'simplified': [
-        'One line small',
+        # 'One line small',
         # 'One line large',
-        'Curve edge case',
+        # 'Curve edge case',
         # 'Two lines edge case',
         'simplified_instance_from_report',
-        'Test shortest homotopic edges',
-        'Test straight line homotopy'
+        # 'Test shortest homotopic edges',
+        # 'Test straight line homotopy'
     ],
     'general': [
         # 'instance_from_report',
@@ -24,7 +24,7 @@ def main():
 
     for instance_name in ipe_instances['simplified']:
         file = f"instances/simplified/ipe/{instance_name}.ipe"
-        instance = SimplifiedInstance(instance_name, file)
+        instance = SimplifiedInstance(instance_name, file=file)
         # print(instance)
 
         instance_folder = f"{ipe_plot_folder}/{instance_name}"
@@ -37,7 +37,7 @@ def main():
         for edge in instance.graph.edges:
             edge.thickness = edge.weight
 
-        objective = Objective.TOTAL
+        objective = Objective.MAX
         displacement_method = Displacer.DIAMOND
         instance.solve(objective, displacement_method)
         # print(instance)
