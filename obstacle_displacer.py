@@ -5,6 +5,14 @@ from constraint import ObstaclePairConstraint, ObstacleVertexConstraint
 from utils import check_segment_segment_intersection, distance, on_segment
 
 
+class Objective(Enum):
+    """
+    The objective function to be minimized.
+    """
+    MAX = 1  # The maximum displacement
+    TOTAL = 2  # The total displacement
+
+
 class Displacer(Enum):
     """
     The displacer used for displacing the obstacles.
@@ -12,14 +20,6 @@ class Displacer(Enum):
     SCIPY = 1  # The ScipyDisplacer
     OPTIMAL = 2  # The OptimalDisplacer
     DIAMOND = 3  # The DiamondDisplacer
-
-
-class Objective(Enum):
-    """
-    The objective function to be minimized.
-    """
-    MAX = 1  # The maximum displacement
-    TOTAL = 2  # The total displacement
 
 
 class ObstacleDisplacer:

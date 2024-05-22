@@ -41,7 +41,7 @@ class SimplifiedInstance(Instance):
     def __init__(self, instance_name, file):
         super().__init__(instance_name, file)
 
-    def solve(self, displacement_method, objective):
+    def solve(self, objective, displacement_method):
         """
         Solves the instance.
 

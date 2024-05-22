@@ -18,12 +18,13 @@ min_point_diameter = 1
 min_edge_width = 1
 
 
-def visualize(instance, folder, thick_edges=True, show_axes=False, show_delaunay=False):
+def visualize(instance, folder, filename, thick_edges=True, show_axes=False, show_delaunay=False):
     """
     Visualizes the given instance.
 
     :param instance: an Instance object
     :param folder: the folder in which the plot should be saved
+    :param filename: the filename of the plot
     :param thick_edges: whether the instance should be drawn with thick edges
     :param show_axes: whether the axes of the plot should be drawn
     :param show_delaunay: whether the Delaunay triangulation on the vertices and obstacles should be drawn
@@ -94,7 +95,7 @@ def visualize(instance, folder, thick_edges=True, show_axes=False, show_delaunay
     hti.screenshot(html_str=html, save_as=f'{instance.name}.png')
 
     Path(folder).mkdir(parents=True, exist_ok=True)
-    os.replace(f'{instance.name}.png', f'{folder}/{instance.name}.png')
+    os.replace(f'{instance.name}.png', f'{folder}/{filename}.png')
 
 
 def get_thick_segment_corners(p1, p2, thickness):
