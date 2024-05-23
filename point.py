@@ -3,8 +3,6 @@ class Point:
         self.x = x
         self.y = y
 
-        self.outgoing_edges = []  # Set of half-edges leaving the point in the Delaunay triangulation
-
     def __eq__(self, other):
         return self.x == other.x and self.y == other.y
 

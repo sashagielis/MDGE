@@ -78,14 +78,15 @@ def visualize(instance, folder, filename, thick_edges=True, show_axes=False, sho
         plot.circle(float(vertex.x), float(vertex.y), color=vertex.color)
 
     if show_delaunay:
-        dt = DelaunayTriangulation(instance)
+        points = instance.graph.vertices + instance.obstacles
+        dt = DelaunayTriangulation(points)
 
         # Draw Delaunay triangulation
         xs = []
         ys = []
-        for triangle in dt.dt.simplices:
-            xs.append([[[float(dt.points[i].x) for i in triangle]]])
-            ys.append([[[float(dt.points[i].y) for i in triangle]]])
+        for triangle in dt.triangles:
+            xs.append([[[float(he.origin.x) for he in triangle.half_edges]]])
+            ys.append([[[float(he.origin.y) for he in triangle.half_edges]]])
         plot.multi_polygons(xs, ys, line_color='black', fill_alpha=0)
 
     # Save plot as png

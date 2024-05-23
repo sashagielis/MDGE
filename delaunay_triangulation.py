@@ -5,6 +5,19 @@ from point import Point
 from utils import check_segment_segment_intersection, orientation
 
 
+class DelaunayVertex(Point):
+    """
+    A vertex of the Delaunay triangulation.
+    """
+    def __init__(self, point):
+        """
+        :param point: a Point object
+        """
+        super().__init__(point.x, point.y)
+
+        self.outgoing_edges = []  # Set of half-edges leaving the vertex
+
+
 class HalfEdge:
     """
     A half-edge connecting two Delaunay points, contained within the triangle on its left-hand side.
@@ -84,59 +97,37 @@ class Triangle:
 
 class DelaunayTriangulation:
     """
-    A Delaunay triangulation on the vertices and obstacles in the instance.
-    Extra points are added to specify small bounding boxes for the vertices and obstacles to deal with homotopy.
-    Another four extra points are added to specify a bounding box of the instance.
+    A Delaunay triangulation on a set of points.
     """
-    def __init__(self, instance):
+    def __init__(self, points):
         """
-        :param instance: a SimplifiedInstance object
+        :param points: a list of Point objects
         """
-        self.instance = instance
+        self.vertices = []
+        self.point_to_dt_vertex = {}
+        dt_input_points = []
 
-        extra_dt_points = []
+        # Construct Delaunay vertices
+        for point in points:
+            dt_vertex = DelaunayVertex(point)
+            self.vertices.append(dt_vertex)
+            self.point_to_dt_vertex[id(point)] = dt_vertex
 
-        # Construct extra Delaunay points corresponding to a small bounding box for each vertex and point obstacle
-        # This helps to identify along which sides of the obstacles the shortest homotopic edges move
-        # Delta must be small enough to prevent edges from moving through the bounding box (except for their endpoints')
-        # At the same time, SciPy Delaunay cannot handle too small coordinate differences (0.00001 does not work)
-        delta = 0.0001
-        dt_points = self.instance.graph.vertices + self.instance.obstacles
-        for point in dt_points:
-            # Reset outgoing edges
-            point.outgoing_edges = []
-
-            tl_box_point = point + Point(-delta, delta)
-            tr_box_point = point + Point(delta, delta)
-            br_box_point = point + Point(delta, -delta)
-            bl_box_point = point + Point(-delta, -delta)
-
-            extra_dt_points.extend([tl_box_point, tr_box_point, br_box_point, bl_box_point])
-
-        # Construct extra Delaunay points corresponding to a bounding box of the instance
-        # This makes it easier to compute the shortest homotopic edges using the funnel algorithm
-        tl_bbox_point = Point(self.instance.min_x - 1, self.instance.max_y + 1)
-        tr_bbox_point = Point(self.instance.max_x + 1, self.instance.max_y + 1)
-        br_bbox_point = Point(self.instance.max_x + 1, self.instance.min_y - 1)
-        bl_bbox_point = Point(self.instance.min_x - 1, self.instance.min_y - 1)
-        extra_dt_points.extend([tl_bbox_point, tr_bbox_point, br_bbox_point, bl_bbox_point])
-
-        self.points = dt_points + extra_dt_points
-
-        # Compute the Delaunay triangulation
-        dt_input_points = np.array([[float(point.x), float(point.y)] for point in self.points])
-        self.dt = Delaunay(dt_input_points)
+            dt_input_points.append([float(point.x), float(point.y)])
 
         self.triangles = []
 
+        # Compute the Delaunay triangulation
+        dt = Delaunay(np.array(dt_input_points))
+
         # Iterate over all triangles
-        for i in range(len(self.dt.simplices)):
+        for i in range(len(dt.simplices)):
             triangle = Triangle()
 
             # Consider each edge of the triangle
             for j in range(3):
-                p1 = self.points[self.dt.simplices[i][j]]
-                p2 = self.points[self.dt.simplices[i][(j + 1) % 3]]
+                p1 = self.vertices[dt.simplices[i][j]]
+                p2 = self.vertices[dt.simplices[i][(j + 1) % 3]]
 
                 # Construct half-edge
                 he = HalfEdge(p1, p2)
@@ -144,7 +135,7 @@ class DelaunayTriangulation:
                 p1.outgoing_edges.append(he)
 
                 # Find other triangle adjacent to the edge
-                neighbor_index = self.dt.neighbors[i][(j + 2) % 3]
+                neighbor_index = dt.neighbors[i][(j + 2) % 3]
 
                 # If neighboring triangle was already created, find twin edge
                 if -1 < neighbor_index < i:
@@ -162,6 +153,18 @@ class DelaunayTriangulation:
                 triangle.half_edges[j].prev = triangle.half_edges[(j - 1) % 3]
 
             self.triangles.append(triangle)
+
+    def get_delaunay_vertex_from_point(self, point):
+        """
+        Maps a point to its corresponding Delaunay vertex.
+
+        :param point: a Point object
+        :returns: the DelaunayVertex object corresponding to the given point
+        """
+        if id(point) in self.point_to_dt_vertex:
+            return self.point_to_dt_vertex[id(point)]
+        else:
+            raise Exception(f"Given point {point} is not a Delaunay vertex")
 
     def __str__(self):
         result = "Triangles:\n"

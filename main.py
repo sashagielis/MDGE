@@ -5,11 +5,11 @@ from visualizer import visualize
 # IPE instances
 ipe_instances = {
     'simplified': [
-        # 'One line small',
+        'One line small',
         # 'One line large',
         # 'Curve edge case',
         # 'Two lines edge case',
-        'simplified_instance_from_report',
+        # 'simplified_instance_from_report',
         # 'Test shortest homotopic edges',
         # 'Test straight line homotopy'
     ],
@@ -30,7 +30,6 @@ def main():
         instance_folder = f"{ipe_plot_folder}/{instance_name}"
 
         # Visualize input
-        # input_folder = f"{ipe_plot_folder}/input"
         visualize(instance, instance_folder, instance_name, False, True)
 
         # Set edge thicknesses
@@ -45,7 +44,7 @@ def main():
         # Visualize solution
         solution_folder = f"{instance_folder}/solutions"
         solution_filename = f"{instance_name} - {objective.name} - {displacement_method.name}"
-        visualize(instance, solution_folder, solution_filename, False, True)
+        visualize(instance, solution_folder, solution_filename, False, True, True)
 
 
 if __name__ == "__main__":
