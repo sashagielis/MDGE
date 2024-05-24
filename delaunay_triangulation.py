@@ -17,15 +17,23 @@ class DelaunayVertex(Point):
 
         self.outgoing_edges = []  # Set of half-edges leaving the vertex
 
+    def has_edge(self, v):
+        """
+        Determines whether the vertex has a half-edge towards v.
+
+        :param v: a DelaunayVertex object
+        """
+        return any(he.target == v for he in self.outgoing_edges)
+
 
 class HalfEdge:
     """
-    A half-edge connecting two Delaunay points, contained within the triangle on its left-hand side.
+    A half-edge connecting two Delaunay vertices, contained within the triangle on its left-hand side.
     """
     def __init__(self, origin, target):
         """
-        :param origin: a Point object, specifying the origin of the half-edge
-        :param target: a Point object, specifying the target of the half-edge
+        :param origin: a DelaunayVertex object, specifying the origin of the half-edge
+        :param target: a DelaunayVertex object, specifying the target of the half-edge
         """
         self.origin = origin
         self.target = target
@@ -36,8 +44,9 @@ class HalfEdge:
 
     def orientation(self, p):
         """
-        Determines the orientation of the point with respect to the half-edge.
+        Determines the orientation of point p with respect to the half-edge.
 
+        :param p: a Point object
         :returns: 0 : collinear, 1 : clockwise, 2 : counterclockwise
         """
         return orientation(self.origin, self.target, p)
@@ -45,11 +54,11 @@ class HalfEdge:
     def intersects(self, p, q):
         """
         Determines whether the half-edge intersects line segment pq.
+
+        :param p: a Point object
+        :param q: a Point object
         """
-        if check_segment_segment_intersection(self.origin, self.target, p, q):
-            return True
-        else:
-            return False
+        return check_segment_segment_intersection(self.origin, self.target, p, q)
 
     def __str__(self):
         return f"{self.origin} -> {self.target}"
@@ -74,12 +83,12 @@ class Triangle:
 
     def exited_by(self, p, q):
         """
-        Determines whether an edge exits the triangle via its link pq.
-        Checks if the directed line segment pq crosses one of the triangles' half-edges towards the outside.
+        Determines whether directed line segment pq exits the triangle.
+        Checks if pq crosses one of the triangles' half-edges towards the outside.
 
         :param p: a Point object
         :param q: a Point object
-        :returns: the crossed half-edge (either if crossed in a node), or None if pq does not exit the triangle
+        :returns: the crossed half-edge (either if crossed in a vertex), or None if pq does not exit the triangle
         """
         for he in self.half_edges:
             if (he.intersects(p, q)
@@ -104,7 +113,8 @@ class DelaunayTriangulation:
         :param points: a list of Point objects
         """
         self.vertices = []
-        self.point_to_dt_vertex = {}
+        self.point_to_dt_vertex = {}  # Mapping from points to their Delaunay vertices
+
         dt_input_points = []
 
         # Construct Delaunay vertices
@@ -117,7 +127,7 @@ class DelaunayTriangulation:
 
         self.triangles = []
 
-        # Compute the Delaunay triangulation
+        # Compute Delaunay triangulation
         dt = Delaunay(np.array(dt_input_points))
 
         # Iterate over all triangles
@@ -154,17 +164,17 @@ class DelaunayTriangulation:
 
             self.triangles.append(triangle)
 
-    def get_delaunay_vertex_from_point(self, point):
+    def get_delaunay_vertex_from_point(self, p):
         """
         Maps a point to its corresponding Delaunay vertex.
 
-        :param point: a Point object
+        :param p: a Point object
         :returns: the DelaunayVertex object corresponding to the given point
         """
-        if id(point) in self.point_to_dt_vertex:
-            return self.point_to_dt_vertex[id(point)]
+        if id(p) in self.point_to_dt_vertex:
+            return self.point_to_dt_vertex[id(p)]
         else:
-            raise Exception(f"Given point {point} is not a Delaunay vertex")
+            raise Exception(f"Given point {p} is not a Delaunay vertex")
 
     def __str__(self):
         result = "Triangles:\n"

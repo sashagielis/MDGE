@@ -20,6 +20,7 @@ class Displacer(Enum):
     SCIPY = 1  # The ScipyDisplacer
     OPTIMAL = 2  # The OptimalDisplacer
     DIAMOND = 3  # The DiamondDisplacer
+    DELAUNAY = 4  # The DelaunayDisplacer
 
 
 class ObstacleDisplacer:

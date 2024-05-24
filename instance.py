@@ -1,6 +1,7 @@
 import math
 import os
 
+from delaunay_displacer import DelaunayDisplacer
 from diamond_displacer import DiamondDisplacer
 from homotopy import Homotopy
 from input_parser import read_ipe_instance
@@ -120,6 +121,8 @@ class SimplifiedInstance(Instance):
             displacer = OptimalDisplacer(self, objective)
         elif displacement_method == Displacer.DIAMOND:
             displacer = DiamondDisplacer(self, objective)
+        elif displacement_method == Displacer.DELAUNAY:
+            displacer = DelaunayDisplacer(self, objective)
         else:
             raise Exception(f"Displacement method {displacement_method.name} not implemented")
 

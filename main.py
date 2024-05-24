@@ -44,7 +44,7 @@ def main():
         # Visualize solution
         solution_folder = f"{instance_folder}/solutions"
         solution_filename = f"{instance_name} - {objective.name} - {displacement_method.name}"
-        visualize(instance, solution_folder, solution_filename, False, True, True)
+        visualize(instance, solution_folder, solution_filename, False, True)
 
 
 if __name__ == "__main__":
