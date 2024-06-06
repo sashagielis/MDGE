@@ -118,13 +118,12 @@ class Funnel:
         return result
 
 
-def compute_initial_triangle(edge, dt_v1):
+def compute_initial_triangle(edge):
     """
     Computes the first triangle of the Delaunay triangulation that the edge moves through.
     Edge links located on the boundary of a triangle are not considered to be moving 'through' the triangle.
 
     :param edge: an Edge object
-    :param dt_v1: the DelaunayVertex object corresponding to v1
     :returns: the first triangle and the index of the first edge link moving through the triangle
     """
     i = 0
@@ -134,7 +133,7 @@ def compute_initial_triangle(edge, dt_v1):
         target = edge.path[i + 1]
 
         # For each triangle adjacent to v1, check if it contains the edge link
-        for he in dt_v1.outgoing_edges:
+        for he in edge.v1.outgoing_dt_edges:
             if he.orientation(target) == he.prev.orientation(target) == 2:
                 return he.triangle, i
 
@@ -143,19 +142,18 @@ def compute_initial_triangle(edge, dt_v1):
     return None, i
 
 
-def compute_crossing_sequence(edge, dt_v1):
+def compute_crossing_sequence(edge):
     """
     Computes the (unreduced) sequence of half-edges of the Delaunay triangulation crossed by the edge.
     Only records the half-edges that are crossed when exiting their corresponding triangle.
 
     :param edge: an Edge object
-    :param dt_v1: the DelaunayVertex object corresponding to v1
     :returns: a list describing the crossing sequence of the edge
     """
     sequence = []
 
     # Compute initial triangle and index of first edge link moving 'through' the triangle
-    current_triangle, i = compute_initial_triangle(edge, dt_v1)
+    current_triangle, i = compute_initial_triangle(edge)
 
     # Iterate over the edge links and record crossings
     while i < len(edge.path) - 1:
@@ -180,14 +178,12 @@ def compute_crossing_sequence(edge, dt_v1):
     return sequence
 
 
-def reduce_crossing_sequence(sequence, edge, dt_v1, dt_v2):
+def reduce_crossing_sequence(sequence, edge):
     """
     Reduces the crossing sequence of an edge to its minimum homotopic equivalent.
 
     :param sequence: a list describing the crossing sequence of the edge
     :param edge: an Edge object
-    :param dt_v1: the DelaunayVertex object corresponding to v1
-    :param dt_v2: the DelaunayVertex object corresponding to v2
     :returns: a list describing the reduced crossing sequence of the edge
     """
     reduced_sequence = []
@@ -201,9 +197,9 @@ def reduce_crossing_sequence(sequence, edge, dt_v1, dt_v2):
 
     # Remove redundant edge links incident on vertices
     while reduced_sequence:
-        if any(e in dt_v1.outgoing_edges for e in [reduced_sequence[0], reduced_sequence[0].twin]):
+        if any(e in edge.v1.outgoing_dt_edges for e in [reduced_sequence[0], reduced_sequence[0].twin]):
             reduced_sequence.pop(0)
-        elif any(e in dt_v2.outgoing_edges for e in [reduced_sequence[-1], reduced_sequence[-1].twin]):
+        elif any(e in edge.v2.outgoing_dt_edges for e in [reduced_sequence[-1], reduced_sequence[-1].twin]):
             reduced_sequence.pop()
         else:
             break
@@ -211,13 +207,12 @@ def reduce_crossing_sequence(sequence, edge, dt_v1, dt_v2):
     return reduced_sequence
 
 
-def compute_funnel(sequence, edge, dt_v2):
+def compute_funnel(sequence, edge):
     """
     Computes the funnel of the reduced crossing sequence through the Delaunay triangulation.
 
     :param sequence: a list describing the reduced crossing sequence of the edge
     :param edge: an Edge object
-    :param dt_v2: the DelaunayVertex object corresponding to v2
     :returns the funnel of the edge
     """
     # If the reduced crossing sequence is empty, the shortest path is given by a straight-line edge
@@ -226,7 +221,7 @@ def compute_funnel(sequence, edge, dt_v2):
 
     # Add extra half-edge incident on v2 as 'crossing' to sequence to add v2 to the fan at the end
     last_crossing = sequence[-1]
-    for he in dt_v2.outgoing_edges:
+    for he in edge.v2.outgoing_dt_edges:
         if he.target == last_crossing.target:
             sequence.append(he)
             break
@@ -333,36 +328,22 @@ class Homotopy:
     def compute_delaunay_triangulation(self):
         """
         Computes a Delaunay triangulation on the vertices and obstacles in the instance.
-        Extra points are added to specify small bounding boxes for the vertices and obstacles to deal with homotopy.
-        Another four extra points are added to specify a bounding box of the instance.
+        Four extra points are added to specify a bounding box of the instance.
+
+        :returns: a DelaunayTriangulation object
         """
-        extra_dt_points = []
-
-        # Construct extra Delaunay points corresponding to a small bounding box for each vertex and point obstacle
-        # This helps to identify along which sides of the obstacles the shortest homotopic edges move
-        # Delta must be small enough to prevent edges from moving through the bounding box (except for their endpoints')
-        # At the same time, SciPy Delaunay cannot handle too small coordinate differences (0.00001 does not work)
-        delta = 0.0001
-        dt_points = self.instance.graph.vertices + self.instance.obstacles
-        for point in dt_points:
-            tl_box_point = point + Point(-delta, delta)
-            tr_box_point = point + Point(delta, delta)
-            br_box_point = point + Point(delta, -delta)
-            bl_box_point = point + Point(-delta, -delta)
-
-            extra_dt_points.extend([tl_box_point, tr_box_point, br_box_point, bl_box_point])
-
         # Construct extra Delaunay points corresponding to a bounding box of the instance
         # This makes it easier to compute the shortest homotopic edges using the funnel algorithm
         tl_bbox_point = Point(self.instance.min_x - 1, self.instance.max_y + 1)
         tr_bbox_point = Point(self.instance.max_x + 1, self.instance.max_y + 1)
         br_bbox_point = Point(self.instance.max_x + 1, self.instance.min_y - 1)
         bl_bbox_point = Point(self.instance.min_x - 1, self.instance.min_y - 1)
-        extra_dt_points.extend([tl_bbox_point, tr_bbox_point, br_bbox_point, bl_bbox_point])
+        extra_dt_points = [tl_bbox_point, tr_bbox_point, br_bbox_point, bl_bbox_point]
 
-        points = dt_points + extra_dt_points
+        dt_points = self.instance.graph.vertices + self.instance.obstacles + extra_dt_points
 
-        dt = DelaunayTriangulation(points)
+        # Compute Delaunay triangulation
+        dt = DelaunayTriangulation(dt_points)
 
         return dt
 
@@ -373,18 +354,17 @@ class Homotopy:
         More detailed explanation: https://jeffe.cs.illinois.edu/teaching/compgeom/notes/05-shortest-homotopic.pdf.
         """
         for edge in self.instance.graph.edges:
-            # Retrieve Delaunay vertices corresponding to the endpoints of the edge
-            dt_v1 = self.dt.get_delaunay_vertex_from_point(edge.v1)
-            dt_v2 = self.dt.get_delaunay_vertex_from_point(edge.v2)
-
             # Compute the crossing sequence of the edge
-            sequence = compute_crossing_sequence(edge, dt_v1)
+            sequence = compute_crossing_sequence(edge)
 
             # Reduce the crossing sequence
-            reduced_sequence = reduce_crossing_sequence(sequence, edge, dt_v1, dt_v2)
+            reduced_sequence = reduce_crossing_sequence(sequence, edge)
+
+            # Assign the reduced crossing sequence to the edge
+            edge.crossing_sequence = reduced_sequence
 
             # Compute the funnel of the reduced crossing sequence
-            funnel = compute_funnel(reduced_sequence, edge, dt_v2)
+            funnel = compute_funnel(reduced_sequence, edge)
 
             # Compute the shortest path through the funnel
             shortest_path = compute_shortest_path(funnel, edge)

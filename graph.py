@@ -10,7 +10,9 @@ class Vertex(Point):
         super().__init__(x, y)
         self.id = next(self.id_iter)
         self.color = color
-        self.diameter = 1
+        self.radius = 0.5
+
+        self.elbow_bundles = []  # List of elbow bundles associated with the vertex, i.e., bending around it
 
 
 class Edge:
@@ -21,6 +23,9 @@ class Edge:
         self.weight = weight
         self.color = color
         self.thickness = 1
+
+        self.crossing_sequence = None  # The reduced crossing sequence of the edge through the Delaunay triangulation
+        self.elbow_bundle_v1 = None  # The terminal elbow bundle for v1
 
     def __str__(self):
         result = f"({self.color}) ["

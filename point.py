@@ -3,6 +3,8 @@ class Point:
         self.x = x
         self.y = y
 
+        self.outgoing_dt_edges = []  # Set of half-edges leaving the point in a Delaunay triangulation
+
     def __eq__(self, other):
         return self.x == other.x and self.y == other.y
 
@@ -11,6 +13,9 @@ class Point:
 
     def __sub__(self, other):
         return Point(self.x - other.x, self.y - other.y)
+
+    def __mul__(self, value):
+        return Point(self.x * value, self.y * value)
 
     def __truediv__(self, value):
         return Point(self.x / value, self.y / value)

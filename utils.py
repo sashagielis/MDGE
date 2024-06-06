@@ -23,7 +23,7 @@ def distance(p, q):
 
 def angle(p, q):
     """
-    Determines the angle of rotation of line segment pq.
+    Determines the angle of rotation of line segment pq in radians.
     """
     dx = q.x - p.x
     dy = q.y - p.y

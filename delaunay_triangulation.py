@@ -1,39 +1,17 @@
 import numpy as np
 from scipy.spatial import Delaunay
 
-from point import Point
 from utils import check_segment_segment_intersection, orientation
-
-
-class DelaunayVertex(Point):
-    """
-    A vertex of the Delaunay triangulation.
-    """
-    def __init__(self, point):
-        """
-        :param point: a Point object
-        """
-        super().__init__(point.x, point.y)
-
-        self.outgoing_edges = []  # Set of half-edges leaving the vertex
-
-    def has_edge(self, v):
-        """
-        Determines whether the vertex has a half-edge towards v.
-
-        :param v: a DelaunayVertex object
-        """
-        return any(he.target == v for he in self.outgoing_edges)
 
 
 class HalfEdge:
     """
-    A half-edge connecting two Delaunay vertices, contained within the triangle on its left-hand side.
+    A half-edge connecting two Delaunay points, contained within the triangle on its left-hand side.
     """
     def __init__(self, origin, target):
         """
-        :param origin: a DelaunayVertex object, specifying the origin of the half-edge
-        :param target: a DelaunayVertex object, specifying the target of the half-edge
+        :param origin: a Point object, specifying the origin of the half-edge
+        :param target: a Point object, specifying the target of the half-edge
         """
         self.origin = origin
         self.target = target
@@ -73,7 +51,11 @@ class Triangle:
 
     def get_edge(self, origin, target):
         """
-        Returns the edge in the triangle with given origin and target, or None if it does not exist.
+        Returns the half-edge of the triangle with given origin and target.
+
+        :param origin: a Point object
+        :param target: a Point object
+        :returns: the half-edge from origin to target, or None if it is not part of the triangle
         """
         for he in self.half_edges:
             if he.origin == origin and he.target == target:
@@ -113,17 +95,14 @@ class DelaunayTriangulation:
         :param points: a list of Point objects
         """
         self.vertices = []
-        self.point_to_dt_vertex = {}  # Mapping from points to their Delaunay vertices
 
         dt_input_points = []
 
-        # Construct Delaunay vertices
+        # Initialize Delaunay points
         for point in points:
-            dt_vertex = DelaunayVertex(point)
-            self.vertices.append(dt_vertex)
-            self.point_to_dt_vertex[id(point)] = dt_vertex
-
+            point.outgoing_dt_edges = []
             dt_input_points.append([float(point.x), float(point.y)])
+            self.vertices.append(point)
 
         self.triangles = []
 
@@ -142,7 +121,7 @@ class DelaunayTriangulation:
                 # Construct half-edge
                 he = HalfEdge(p1, p2)
                 he.triangle = triangle
-                p1.outgoing_edges.append(he)
+                p1.outgoing_dt_edges.append(he)
 
                 # Find other triangle adjacent to the edge
                 neighbor_index = dt.neighbors[i][(j + 2) % 3]
@@ -163,18 +142,6 @@ class DelaunayTriangulation:
                 triangle.half_edges[j].prev = triangle.half_edges[(j - 1) % 3]
 
             self.triangles.append(triangle)
-
-    def get_delaunay_vertex_from_point(self, p):
-        """
-        Maps a point to its corresponding Delaunay vertex.
-
-        :param p: a Point object
-        :returns: the DelaunayVertex object corresponding to the given point
-        """
-        if id(p) in self.point_to_dt_vertex:
-            return self.point_to_dt_vertex[id(p)]
-        else:
-            raise Exception(f"Given point {p} is not a Delaunay vertex")
 
     def __str__(self):
         result = "Triangles:\n"

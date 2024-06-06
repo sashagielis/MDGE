@@ -3,6 +3,7 @@ import os
 
 from delaunay_displacer import DelaunayDisplacer
 from diamond_displacer import DiamondDisplacer
+from growing_algorithm import GrowingAlgorithm
 from homotopy import Homotopy
 from input_parser import read_ipe_instance
 from obstacle import PointObstacle
@@ -92,6 +93,7 @@ class Instance:
         result = self.name + "\n" + str(self.graph) + "\nObstacles:\n"
         for obstacle in self.obstacles:
             result += f"- {obstacle}\n"
+        result = result[:-1]
 
         return result
 
@@ -127,12 +129,14 @@ class SimplifiedInstance(Instance):
             raise Exception(f"Displacement method {displacement_method.name} not implemented")
 
         # Displace the obstacles
-        displacement_cost = displacer.execute()
-        print(f"Displacement cost = {displacement_cost}")
+        # displacement_cost = displacer.execute()
+        # print(f"Displacement cost = {displacement_cost}")
 
         # TODO: Recompute shortest homotopic edges
 
-        # TODO: compute thick homotopic edges using growing algorithm
+        # Compute thick homotopic edges using growing algorithm
+        growing_algo = GrowingAlgorithm(self)
+        growing_algo.compute_thick_edges()
 
 
 class GeneralInstance(Instance):

@@ -20,6 +20,8 @@ class PointObstacle(Point, Obstacle):
         self.original_position = Point(point.x, point.y)
         self.displacement = 0
 
+        self.elbow_bundles = []  # List of elbow bundles associated with the obstacle, i.e., bending around it
+
 
 class PolygonalObstacle(Obstacle):
     def __init__(self, path, fill_color='grey', stroke_color='black'):

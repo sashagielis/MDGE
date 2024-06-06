@@ -5,13 +5,14 @@ from visualizer import visualize
 # IPE instances
 ipe_instances = {
     'simplified': [
-        'One line small',
+        # 'One line small',
         # 'One line large',
-        # 'Curve edge case',
+        'Curve edge case',
         # 'Two lines edge case',
         # 'simplified_instance_from_report',
-        # 'Test shortest homotopic edges',
+        'Test shortest homotopic edges',
         # 'Test straight line homotopy'
+        'Simplified single paths'
     ],
     'general': [
         # 'instance_from_report',
@@ -36,6 +37,9 @@ def main():
         for edge in instance.graph.edges:
             edge.thickness = edge.weight
 
+            edge.v1.radius = edge.thickness / 2
+            edge.v2.radius = edge.thickness / 2
+
         objective = Objective.MAX
         displacement_method = Displacer.DIAMOND
         instance.solve(objective, displacement_method)
@@ -44,7 +48,7 @@ def main():
         # Visualize solution
         solution_folder = f"{instance_folder}/solutions"
         solution_filename = f"{instance_name} - {objective.name} - {displacement_method.name}"
-        visualize(instance, solution_folder, solution_filename, False, True)
+        visualize(instance, solution_folder, solution_filename, True, True)
 
 
 if __name__ == "__main__":

@@ -8,13 +8,14 @@ from bokeh.resources import CDN
 from html2image import Html2Image
 from pathlib import Path
 
+from compact_routing_structure import StraightBundle
 from delaunay_triangulation import DelaunayTriangulation
 from obstacle import PointObstacle
 from point import Point
-from utils import angle, distance
+from utils import angle, distance, vector_length
 
 # Minimum visible point diameter and edge width
-min_point_diameter = 1
+min_point_radius = 0.5
 min_edge_width = 1
 
 
@@ -40,26 +41,114 @@ def visualize(instance, folder, filename, thick_edges=True, show_axes=False, sho
 
     # Draw edges
     for edge in instance.graph.edges:
-        path = edge.path
         if thick_edges:
-            xs = []
-            ys = []
-            for i in range(len(path) - 1):
-                p1 = path[i]
-                p2 = path[i + 1]
-                if i != 0:
-                    plot.circle(float(p1.x), float(p1.y), radius=edge.thickness/2, color=edge.color)
+            straight_xs, straight_ys = [], []
+            straight_outline_xs, straight_outline_ys = [], []
 
-                segment_corners = get_thick_segment_corners(p1, p2, edge.thickness)
-                xs.append([[[corner.x for corner in segment_corners]]])
-                ys.append([[[corner.y for corner in segment_corners]]])
+            elbow_xs, elbow_ys = [], []
+            inner_radii, outer_radii = [], []
+            start_angles, end_angles = [], []
+
+            done = False
+            current_bundle = edge.elbow_bundle_v1.right
+            while not done:
+                if type(current_bundle) == StraightBundle:
+                    left_eb = current_bundle.left
+                    right_eb = current_bundle.right
+
+                    p1 = left_eb.point
+                    p2 = right_eb.point
+
+                    # If left_eb is a terminal elbow, p1 is the left point of the straight
+                    # Otherwise, compute offset of left point from p1 based on orientation
+                    if not left_eb.is_terminal:
+                        if left_eb.orientation == 1:
+                            ang = left_eb.right_angle
+                            vec = Point(math.cos(ang), math.sin(ang))
+                            direction = vec / vector_length(vec)
+                            magnitude = left_eb.layer_thickness + edge.thickness / 2
+                            p1 += direction * magnitude
+                        else:
+                            ang = left_eb.left_angle
+                            vec = Point(math.cos(ang), math.sin(ang))
+                            direction = vec / vector_length(vec)
+                            magnitude = left_eb.layer_thickness + edge.thickness / 2
+                            p1 += direction * magnitude
+
+                    # If right_eb is a terminal elbow, p2 is the right point of the straight
+                    # Otherwise, compute offset of right point from p2 based on orientation
+                    if not right_eb.is_terminal:
+                        if right_eb.orientation == 1:
+                            ang = right_eb.left_angle
+                            vec = Point(math.cos(ang), math.sin(ang))
+                            direction = vec / vector_length(vec)
+                            magnitude = right_eb.layer_thickness + edge.thickness / 2
+                            p2 += direction * magnitude
+                        else:
+                            ang = right_eb.right_angle
+                            vec = Point(math.cos(ang), math.sin(ang))
+                            direction = vec / vector_length(vec)
+                            magnitude = right_eb.layer_thickness + edge.thickness / 2
+                            p2 += direction * magnitude
+
+                    # Set segment corners of straight
+                    segment_corners = get_thick_segment_corners(p1, p2, edge.thickness)
+                    straight_xs.append([[[corner.x for corner in segment_corners]]])
+                    straight_ys.append([[[corner.y for corner in segment_corners]]])
+
+                    # Set outlines of straight
+                    straight_outline_xs.append([segment_corners[0].x, segment_corners[1].x])
+                    straight_outline_xs.append([segment_corners[2].x, segment_corners[3].x])
+                    straight_outline_ys.append([segment_corners[0].y, segment_corners[1].y])
+                    straight_outline_ys.append([segment_corners[2].y, segment_corners[3].y])
+
+                    # If we arrive at the elbow bundle corresponding to v2, we are done
+                    if current_bundle.right.is_terminal:
+                        done = True
+                else:
+                    # Set center of annular wedge
+                    elbow_xs.append(float(current_bundle.point.x))
+                    elbow_ys.append(float(current_bundle.point.y))
+
+                    # Set radii of annular wedge
+                    inner_radii.append(current_bundle.layer_thickness)
+                    outer_radii.append(current_bundle.layer_thickness + current_bundle.thickness)
+
+                    # Set angles of annular wedge
+                    start_angles.append(current_bundle.right_angle)
+                    end_angles.append(current_bundle.left_angle)
+
+                # Move to the next bundle of the thick edge
+                current_bundle = current_bundle.right
+
+            # Draw straights
+            plot.multi_polygons(straight_xs, straight_ys, line_alpha=0, fill_color=edge.color)
+
+            # Draw elbows
+            plot.annular_wedge(elbow_xs, elbow_ys,
+                               inner_radius=inner_radii, outer_radius=outer_radii,
+                               start_angle=start_angles, end_angle=end_angles,
+                               line_alpha=0, fill_color=edge.color)
+
+            # Draw outlines of straights
+            plot.multi_line(straight_outline_xs, straight_outline_ys, line_color='black')
+
+            # Draw outlines of elbows
+            plot.arc(elbow_xs, elbow_ys,
+                     radius=inner_radii,
+                     start_angle=start_angles, end_angle=end_angles,
+                     line_color='black')
+            plot.arc(elbow_xs, elbow_ys,
+                     radius=outer_radii,
+                     start_angle=start_angles, end_angle=end_angles,
+                     line_color='black')
         else:
+            path = edge.path
+
             xs = [float(p.x) for p in path]
             ys = [float(p.y) for p in path]
 
-        if thick_edges:
-            plot.multi_polygons(xs, ys, line_color=edge.color, fill_color=edge.color)
-        else:
+            # Draw thin edge
             plot.line(xs, ys, line_width=min_edge_width, color=edge.color)
 
     # Draw obstacles
@@ -74,8 +163,8 @@ def visualize(instance, folder, filename, thick_edges=True, show_axes=False, sho
 
     # Draw vertices
     for vertex in instance.graph.vertices:
-        # size = vertex.diameter if thick_edges else min_point_diameter
-        plot.circle(float(vertex.x), float(vertex.y), color=vertex.color)
+        radius = vertex.radius if thick_edges else min_point_radius
+        plot.circle(float(vertex.x), float(vertex.y), radius=radius, color=vertex.color)
 
     if show_delaunay:
         points = instance.graph.vertices + instance.obstacles
