@@ -60,36 +60,22 @@ def visualize(instance, folder, filename, thick_edges=True, show_axes=False, sho
                     p2 = right_eb.point
 
                     # If left_eb is a terminal elbow, p1 is the left point of the straight
-                    # Otherwise, compute offset of left point from p1 based on orientation
+                    # Otherwise, left_eb bends around p1 and compute offset of left point from p1 based on orientation
                     if not left_eb.is_terminal:
-                        if left_eb.orientation == 1:
-                            ang = left_eb.right_angle
-                            vec = Point(math.cos(ang), math.sin(ang))
-                            direction = vec / vector_length(vec)
-                            magnitude = left_eb.layer_thickness + edge.thickness / 2
-                            p1 += direction * magnitude
-                        else:
-                            ang = left_eb.left_angle
-                            vec = Point(math.cos(ang), math.sin(ang))
-                            direction = vec / vector_length(vec)
-                            magnitude = left_eb.layer_thickness + edge.thickness / 2
-                            p1 += direction * magnitude
+                        ang = left_eb.right_angle if left_eb.orientation == 1 else left_eb.left_angle
+                        vec = Point(math.cos(ang), math.sin(ang))
+                        direction = vec / vector_length(vec)
+                        magnitude = left_eb.layer_thickness + edge.thickness / 2
+                        p1 += direction * magnitude
 
                     # If right_eb is a terminal elbow, p2 is the right point of the straight
-                    # Otherwise, compute offset of right point from p2 based on orientation
+                    # Otherwise, right_eb bends around p2 and compute offset of right point from p2 based on orientation
                     if not right_eb.is_terminal:
-                        if right_eb.orientation == 1:
-                            ang = right_eb.left_angle
-                            vec = Point(math.cos(ang), math.sin(ang))
-                            direction = vec / vector_length(vec)
-                            magnitude = right_eb.layer_thickness + edge.thickness / 2
-                            p2 += direction * magnitude
-                        else:
-                            ang = right_eb.right_angle
-                            vec = Point(math.cos(ang), math.sin(ang))
-                            direction = vec / vector_length(vec)
-                            magnitude = right_eb.layer_thickness + edge.thickness / 2
-                            p2 += direction * magnitude
+                        ang = right_eb.left_angle if right_eb.orientation == 1 else right_eb.right_angle
+                        vec = Point(math.cos(ang), math.sin(ang))
+                        direction = vec / vector_length(vec)
+                        magnitude = right_eb.layer_thickness + edge.thickness / 2
+                        p2 += direction * magnitude
 
                     # Set segment corners of straight
                     segment_corners = get_thick_segment_corners(p1, p2, edge.thickness)

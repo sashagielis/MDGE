@@ -1,6 +1,6 @@
 import math
 
-from utils import orientation, angle
+from utils import angle, on_segment, orientation
 
 
 class StraightBundle:
@@ -47,7 +47,6 @@ class ElbowBundle:
         Determines whether the elbow bundle is closer to its associated point than the given elbow bundle eb.
         The elbow bundles must be associated with the same point.
         Assumes that if self.inner == eb.inner == None, the inner field is not yet initialized.
-        Cannot handle collinear points well...
 
         :param eb: an ElbowBundle object
         """
@@ -101,9 +100,15 @@ class ElbowBundle:
         elif prev_eb.point == current_self.point:
             return prev_eb.orientation == 1
 
-        # Otherwise, self is closest if its current point is right of eb's last segment
+        # Otherwise, current_self and current_eb ended at different non-terminal elbows and prev_self = prev_eb
         else:
-            return orientation(prev_eb.point, current_eb.point, current_self.point) == 1
+            # If self's current point and the last straight are collinear, self is closest if it is closer to prev_self
+            if orientation(prev_self.point, current_self.point, current_eb.point) == 0:
+                return on_segment(prev_self.point, current_eb.point, current_self.point)
+
+            # Otherwise, self is closest if its current point is right of eb's last straight
+            else:
+                return orientation(prev_self.point, current_eb.point, current_self.point) == 1
 
     def __str__(self):
         return str(self.point)
