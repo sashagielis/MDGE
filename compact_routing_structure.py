@@ -64,12 +64,16 @@ class ElbowBundle:
         while inner_self is not None:
             if inner_self == eb:
                 return False
+            else:
+                inner_self = inner_self.inner
 
         # Check if self is inside eb
         inner_eb = eb.inner
         while inner_eb is not None:
             if inner_eb == self:
                 return True
+            else:
+                inner_eb = inner_eb.inner
 
         # If we arrive here, we have that self.inner = eb.inner = None
         # Then starting from self and eb, we pairwise move over their elbow bundles in the same direction
@@ -85,26 +89,32 @@ class ElbowBundle:
         current_self = self
         current_eb = eb
         while current_self.point == current_eb.point:
-            current_self = self.right.right if not revert_self else self.left.left
-            current_eb = eb.right.right if not revert_eb else eb.left.left
+            current_self = current_self.right.right if not revert_self else current_self.left.left
+            current_eb = current_eb.right.right if not revert_eb else current_eb.left.left
 
         # Determine the elbow bundles just before the current ones
-        prev_self = self.left.left if not revert_self else self.right.right
-        prev_eb = eb.left.left if not revert_eb else eb.right.right
+        prev_self = current_self.left.left if not revert_self else current_self.right.right
+        prev_eb = current_eb.left.left if not revert_eb else current_eb.right.right
 
         # If current_eb ended at a terminal elbow, self is closest if its last bend was a left turn
         if prev_self.point == current_eb.point:
-            return prev_self.orientation == 2
+            return prev_self.orientation == 2 if not revert_self else prev_self.orientation == 1
 
         # If current_self ended at a terminal elbow, self is closest if eb's last bend was a right turn
         elif prev_eb.point == current_self.point:
-            return prev_eb.orientation == 1
+            return prev_eb.orientation == 1 if not revert_eb else prev_eb.orientation == 2
 
         # Otherwise, current_self and current_eb ended at different non-terminal elbows and prev_self = prev_eb
         else:
-            # If self's current point and the last straight are collinear, self is closest if it is closer to prev_self
+            # Handle the case where current_self, current_eb and the last straight are collinear
             if orientation(prev_self.point, current_self.point, current_eb.point) == 0:
-                return on_segment(prev_self.point, current_eb.point, current_self.point)
+                # If the last bend was a right turn, self is closest if current_self is closer to prev_self
+                if (not revert_self and prev_self.orientation == 1) or (revert_self and prev_self.orientation == 2):
+                    return on_segment(prev_self.point, current_eb.point, current_self.point)
+
+                # If the last bend was a left turn, self is closest if current_eb is closer to prev_self
+                else:
+                    return on_segment(prev_self.point, current_self.point, current_eb.point)
 
             # Otherwise, self is closest if its current point is right of eb's last straight
             else:

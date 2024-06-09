@@ -2,7 +2,7 @@ from collections import deque
 
 from delaunay_triangulation import DelaunayTriangulation
 from point import Point
-from utils import orientation
+from utils import orientation, on_segment
 
 
 class Funnel:
@@ -107,8 +107,14 @@ class Funnel:
             result = result[:-1]
 
         result += "\nFan: "
+        found_apex = False
         for point in self.fan:
-            result += str(point) + " -> "
+            result += str(point)
+
+            if point == self.apex:
+                found_apex = True
+
+            result += " <- " if not found_apex else " -> "
 
         if len(self.fan) > 0:
             result = result[:-4]
@@ -268,8 +274,21 @@ def compute_funnel(sequence, edge):
 
     # If fan consists of only one point, it does not contain v2 as v2 cannot be the apex
     # This is because the last contraction of the funnel was with respect to v2
-    # Therefore, we add v2 to the fan
+    # Therefore, we can set v2 as the apex and add it to the funnel
     if len(funnel.fan) == 1:
+        funnel.apex = edge.v2
+
+        if len(funnel.tail) >= 2:
+            p1 = funnel.tail[-2]
+            p2 = funnel.tail[-1]
+
+            # If p2 lies on the line segment between p1 and v2, we can remove the unnecessary bend p2 from the tail
+            if on_segment(p1, edge.v2, p2):
+                funnel.tail.pop()
+
+        funnel.tail.append(edge.v2)
+
+        funnel.fan.pop()
         funnel.fan.append(edge.v2)
 
     return funnel
@@ -285,10 +304,6 @@ def compute_shortest_path(funnel, edge):
     """
     # Initialize the shortest path as the tail of the funnel
     shortest_path = funnel.tail
-
-    # If the fan is empty, the shortest path is given by the tail
-    if len(funnel.fan) == 0:
-        return shortest_path
 
     found_apex = False
 

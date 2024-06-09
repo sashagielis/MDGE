@@ -10,10 +10,11 @@ ipe_instances = {
         # 'Curve edge case',
         # 'Two lines edge case',
         # 'simplified_instance_from_report',
-        # 'Test shortest homotopic edges',
+        'Test shortest homotopic edges',
         # 'Test straight line homotopy'
-        # 'Simplified single paths'
-        'Collinear straights'
+        'Simplified single paths',
+        'Collinear straights',
+        'Collinear straights 2',
     ],
     'general': [
         # 'instance_from_report',
@@ -32,7 +33,7 @@ def main():
         instance_folder = f"{ipe_plot_folder}/{instance_name}"
 
         # Visualize input
-        visualize(instance, instance_folder, instance_name, False, True)
+        visualize(instance, instance_folder, instance_name, False, True, False)
 
         # Set edge thicknesses
         for edge in instance.graph.edges:
