@@ -14,7 +14,7 @@ class Funnel:
         """
         :param tail: a list of Point objects
         :param apex: a Point object
-        :param fan: a list of Point objects describing the fan from left to right
+        :param fan: a list of Point objects describing the fan from left to right, which should contain the apex
         """
         self.tail = tail
         self.apex = apex
@@ -223,7 +223,7 @@ def compute_funnel(sequence, edge):
     """
     # If the reduced crossing sequence is empty, the shortest path is given by a straight-line edge
     if len(sequence) == 0:
-        return Funnel([edge.v1, edge.v2], edge.v2, [])
+        return Funnel([edge.v1, edge.v2], edge.v2, [edge.v2])
 
     # Add extra half-edge incident on v2 as 'crossing' to sequence to add v2 to the fan at the end
     last_crossing = sequence[-1]
