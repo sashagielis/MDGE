@@ -10,11 +10,13 @@ ipe_instances = {
         # 'Curve edge case',
         # 'Two lines edge case',
         # 'simplified_instance_from_report',
-        'Test shortest homotopic edges',
-        # 'Test straight line homotopy'
-        'Simplified single paths',
-        'Collinear straights',
-        'Collinear straights 2',
+        # 'Test shortest homotopic edges',
+        # 'Test straight line homotopy',
+        # 'Simplified single paths',
+        # 'Collinear straights',
+        # 'Collinear straights 2',
+        # 'Collinear straights 3',
+        'Collinear straights 4',
     ],
     'general': [
         # 'instance_from_report',

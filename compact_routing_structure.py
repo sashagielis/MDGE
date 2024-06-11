@@ -17,13 +17,37 @@ class StraightBundle:
         # Additional attributes
         self.angle = None  # The angle of the straight bundle in radians
 
+    def is_closer_than(self, sb, p):
+        """
+        Determines whether the straight bundle is closer to the given point p than the given straight bundle sb.
+        The straight bundles must both be associated with p.
+
+        :param sb: a StraightBundle object
+        :param p: a Point object
+        """
+        if self.left.point == p:
+            eb1 = self.left
+        elif self.right.point == p:
+            eb1 = self.right
+        else:
+            raise Exception(f"Straight bundle {self} is not associated with point {p}")
+
+        if sb.left.point == p:
+            eb2 = sb.left
+        elif sb.right.point == p:
+            eb2 = sb.right
+        else:
+            raise Exception(f"Straight bundle {sb} is not associated with point {p}")
+
+        return eb1.is_closer_than(eb2)
+
     def __str__(self):
         return f"{self.left} -> {self.right}"
 
 
 class ElbowBundle:
     """
-    A set of elbows associated with the same point and sharing the same straight bundles on both ends.
+    A set of elbows associated with the same point and sharing the same straight bundle on both ends.
     A terminal elbow forms its own bundle and is not merged with other bundles.
     """
     def __init__(self):
@@ -40,7 +64,7 @@ class ElbowBundle:
         self.is_terminal = False  # Whether it is a terminal elbow bundle
         self.left_angle = None  # The left angle of the annular wedge in radians (None for terminal elbows)
         self.right_angle = None  # The right angle of the annular wedge in radians (None for terminal elbows)
-        self.orientation = 0  # The orientation of the bend, where 0 : terminal, 1 : clockwise, 2 : counterclockwise
+        self.orientation = 0  # The orientation of the bends (0 : terminal, 1 : clockwise, 2 : counterclockwise)
 
     def is_closer_than(self, eb):
         """
@@ -121,7 +145,7 @@ class ElbowBundle:
                 return orientation(prev_self.point, current_eb.point, current_self.point) == 1
 
     def __str__(self):
-        return str(self.point)
+        return f"{self.point}"
 
 
 class CompactRoutingStructure:
@@ -148,6 +172,60 @@ class CompactRoutingStructure:
             # Get reduced crossing sequence of the edge to determine the orientations of the bends
             crossing_sequence = edge.crossing_sequence
             crossing_index = 0
+
+            bend_orientations = []
+            i = 1
+            while i < len(edge.path) - 1:
+                new_point = edge.path[i]
+                new_orientation = None
+
+                # Iterate over crossings in crossing sequence until first crossing with bend as endpoint is found
+                # The crossings around a bend all have the corresponding point on the same side of the half-edge
+                # Therefore, the bend orientation results from whether the point is origin/target of the crossing
+                found_orientation = False
+                while not found_orientation:
+                    crossing = crossing_sequence[crossing_index]
+
+                    # If point is the origin of the crossing, the bend is a right turn
+                    if crossing.origin == new_point:
+                        new_orientation = 1
+                        found_orientation = True
+
+                    # If point is the target of the crossing, the bend is a left turn
+                    elif crossing.target == new_point:
+                        new_orientation = 2
+                        found_orientation = True
+
+                    # Otherwise, check next crossing
+                    else:
+                        crossing_index += 1
+
+                # Check if the addition of the new bend makes the last bend unnecessary
+                if len(bend_orientations) >= 2:
+                    p1 = edge.path[i - 2]
+                    p2 = edge.path[i - 1]
+                    o_p1 = bend_orientations[-2]
+                    o_p2 = bend_orientations[-1]
+
+                    # If p2 lies on the line segment between p1 and the new bend, and the bends have the same
+                    # orientation, we can remove p2 from the path as it does not add any path information
+                    # Leaving p2 on the path would lead to creating an unnecessary and unwanted straight bend
+                    if on_segment(p1, new_point, p2) and o_p1 == o_p2 == new_orientation:
+                        # Remove p2 from the path
+                        del edge.path[i - 1]
+                        del bend_orientations[-1]
+
+                        # Add orientation of new bend
+                        # Do not increment i since we removed a previous point from the path
+                        bend_orientations.append(new_orientation)
+                    else:
+                        # Add orientation of new bend
+                        bend_orientations.append(new_orientation)
+                        i += 1
+                else:
+                    # Add orientation of new bend
+                    bend_orientations.append(new_orientation)
+                    i += 1
 
             straight_bundles = []
             elbow_bundles = []
@@ -182,26 +260,8 @@ class CompactRoutingStructure:
                 else:
                     eb1 = elbow_bundles[i]
 
-                    # Iterate over crossings in crossing sequence until first crossing with p1 as endpoint is found
-                    # The crossings around an elbow all have the elbow point on the same side of the half-edge
-                    # Therefore, the elbow orientation results from whether the point is origin/target of the crossing
-                    found_orientation = False
-                    while not found_orientation:
-                        crossing = crossing_sequence[crossing_index]
-
-                        # If p1 is the origin of the crossing, eb1 is a right turn
-                        if crossing.origin == p1:
-                            eb1.orientation = 1
-                            found_orientation = True
-
-                        # If p1 is the target of the crossing, eb1 is a left turn
-                        elif crossing.target == p1:
-                            eb1.orientation = 2
-                            found_orientation = True
-
-                        # Otherwise, check next crossing
-                        else:
-                            crossing_index += 1
+                    # Set orientation of eb1
+                    eb1.orientation = bend_orientations[i - 1]
 
                     # Set left and right angle of eb1 based on orientation
                     prev_sb = eb1.left
@@ -344,7 +404,61 @@ class CompactRoutingStructure:
         :param x: a StraightBundle (resp. ElbowBundle) object
         :param y: a StraightBundle (resp. ElbowBundle) object
         """
-        return
+        if type(x) != type(y):
+            raise Exception(f"Cannot union {type(x)} {x} and {type(y)} {y}")
+
+        x.size += y.size
+        x.thickness += y.thickness
+
+        if type(x) == type(y) == StraightBundle:
+            if x.is_closer_than(y, x.left.point):
+                x.left = y.left
+
+            if x.is_closer_than(y, x.right.point):
+                x.right = y.right
+
+            # Update the left elbow bundles referencing y to reference x
+            eb_left = y.left
+            while eb_left.right == y:
+                eb_left.right = x
+                eb_left = eb_left.inner
+
+            # Update the right elbow bundles referencing y to reference x
+            eb_right = y.right
+            while eb_right.left == y:
+                eb_right.left = x
+                eb_right = eb_right.inner
+
+            # Check to see if two elbows (on the left) must merge
+            eb1 = x.left
+            eb2 = eb1.inner
+            while eb2 is not None:
+                if eb1.left == eb2.left:
+                    self.union(eb1, eb2)
+
+                eb1 = eb2
+                eb2 = eb2.inner
+
+            # Check to see if two elbows (on the right) must merge
+            eb1 = x.right
+            eb2 = eb1.inner
+            while eb2 is not None:
+                if eb1.right == eb2.right:
+                    self.union(eb1, eb2)
+
+                eb1 = eb2
+                eb2 = eb2.inner
+
+            self.straight_bundles.remove(y)
+        elif type(x) == type(y) == ElbowBundle:
+            if y.is_closer_than(x):
+                x.inner = y.inner
+                x.layer_thickness = y.layer_thickness
+            else:
+                y.left.right = x
+                y.right.left = x
+
+            self.elbow_bundles.remove(y)
 
     def divide(self, sb, eb):
         """

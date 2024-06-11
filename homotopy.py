@@ -30,8 +30,8 @@ class Funnel:
         wedge_origin = self.fan[1]
         wedge_left_target = self.fan[0]
 
-        # While the newly added point is not to the left of the leftmost wedge, shrink the funnel
-        while orientation(wedge_origin, wedge_left_target, point) != 2:
+        # While the newly added point is to the right of the leftmost wedge, shrink the funnel
+        while orientation(wedge_origin, wedge_left_target, point) == 1:
             # Remove the leftmost point from the fan
             old_leftmost_point = self.fan.popleft()
             new_leftmost_point = self.fan[0]
@@ -68,8 +68,8 @@ class Funnel:
         wedge_origin = self.fan[-2]
         wedge_right_target = self.fan[-1]
 
-        # While the newly added point is not to the right of the rightmost wedge, shrink the funnel
-        while orientation(wedge_origin, wedge_right_target, point) != 1:
+        # While the newly added point is to the left of the rightmost wedge, shrink the funnel
+        while orientation(wedge_origin, wedge_right_target, point) == 2:
             # Remove the rightmost point from the fan
             old_rightmost_point = self.fan.pop()
             new_rightmost_point = self.fan[-1]
@@ -95,6 +95,40 @@ class Funnel:
 
         # Extend fan to the right
         self.fan.append(point)
+
+    def advance_tail(self):
+        """
+        Advances the tail of the funnel until the concave chains of the fan only intersect in the apex.
+        """
+        # Since the chains of the fan are concave, we can check for chain overlap starting from the apex
+        apex_index = self.fan.index(self.apex)
+        while self.fan[0] != self.apex and self.fan[-1] != self.apex:
+            # Get the next point of the left chain and the next point of the right chain
+            p1 = self.fan[apex_index - 1]
+            p2 = self.fan[apex_index + 1]
+
+            # If p2 lies on the line segment between the apex and p1, we advance the tail to p2
+            if on_segment(self.apex, p1, p2):
+                self.apex = p2
+                self.tail.append(p2)
+
+                # Update the fan
+                del self.fan[apex_index]
+
+            # If p1 lies on the line segment between the apex and p2, we advance the tail to p1
+            elif on_segment(self.apex, p2, p1):
+                self.apex = p1
+                self.tail.append(p1)
+
+                # Update the fan
+                del self.fan[apex_index]
+
+                # Since the new apex p1 was located one before the previous apex in the fan, decrease apex index by one
+                apex_index -= 1
+
+            # Otherwise, the current concave chains of the fan only intersect in the apex by definition, so we are done
+            else:
+                break
 
     def __str__(self):
         result = "Tail: "
@@ -197,16 +231,16 @@ def reduce_crossing_sequence(sequence, edge):
     # Iteratively remove adjacent pairs of equivalent crossings
     for he in sequence:
         if reduced_sequence and reduced_sequence[-1] == he.twin:
-            reduced_sequence.pop()
+            del reduced_sequence[-1]
         else:
             reduced_sequence.append(he)
 
     # Remove redundant edge links incident on vertices
     while reduced_sequence:
         if any(e in edge.v1.outgoing_dt_edges for e in [reduced_sequence[0], reduced_sequence[0].twin]):
-            reduced_sequence.pop(0)
+            del reduced_sequence[0]
         elif any(e in edge.v2.outgoing_dt_edges for e in [reduced_sequence[-1], reduced_sequence[-1].twin]):
-            reduced_sequence.pop()
+            del reduced_sequence[-1]
         else:
             break
 
@@ -216,6 +250,7 @@ def reduce_crossing_sequence(sequence, edge):
 def compute_funnel(sequence, edge):
     """
     Computes the funnel of the reduced crossing sequence through the Delaunay triangulation.
+    Includes all collinear (straight) bends in the final funnel.
 
     :param sequence: a list describing the reduced crossing sequence of the edge
     :param edge: an Edge object
@@ -232,24 +267,24 @@ def compute_funnel(sequence, edge):
             sequence.append(he)
             break
 
-    current_crossing = sequence[0]
+    current_crossing = None
 
-    # Initialize funnel with v1 and first crossed half-edge
+    # Initialize funnel with v1
     tail = [edge.v1]
     apex = edge.v1
-    fan = [current_crossing.target, edge.v1, current_crossing.origin]
+    fan = [edge.v1]
     funnel = Funnel(tail, apex, fan)
 
-    i = 1
-
     # Consider each crossing in turn
+    i = 0
     while i < len(sequence):
+        # Consider the next crossing
         next_crossing = sequence[i]
 
         # If fan consists of only one point, it is the apex
-        # This happens when the previous crossing caused the edge to leave the fan
+        # This happens when the funnel is not yet initialized, or the previous crossing caused the edge to leave the fan
         # We then rebuild the fan starting from the first crossing not incident on the apex
-        # In other words, we build a new funnel as the previous one cannot be grown any further
+        # In other words, we build a new funnel as the previous one (if any) cannot be grown any further
         if len(funnel.fan) == 1:
             if next_crossing.origin != funnel.apex and next_crossing.target != funnel.apex:
                 funnel.fan.appendleft(next_crossing.target)
@@ -269,6 +304,12 @@ def compute_funnel(sequence, edge):
                 # Contract the funnel from the right inwards
                 funnel.contract_right(new_point)
 
+        # When contracting the funnel wrt a point that is collinear with a fan chain, we simply add it to the chain
+        # As a result, the starts of the left and right concave chain of the fan may overlap due to collinear points
+        # We can then advance the tail such that the chains of the fan only intersect in the apex
+        # By doing this after each contraction, all collinear (straight) bends are included in the final funnel
+        funnel.advance_tail()
+
         current_crossing = next_crossing
         i += 1
 
@@ -277,18 +318,10 @@ def compute_funnel(sequence, edge):
     # Therefore, we can set v2 as the apex and add it to the funnel
     if len(funnel.fan) == 1:
         funnel.apex = edge.v2
-
-        if len(funnel.tail) >= 2:
-            p1 = funnel.tail[-2]
-            p2 = funnel.tail[-1]
-
-            # If p2 lies on the line segment between p1 and v2, we can remove the unnecessary bend p2 from the tail
-            if on_segment(p1, edge.v2, p2):
-                funnel.tail.pop()
-
         funnel.tail.append(edge.v2)
 
-        funnel.fan.pop()
+        # Update the fan
+        del funnel.fan[-1]
         funnel.fan.append(edge.v2)
 
     return funnel
@@ -296,7 +329,7 @@ def compute_funnel(sequence, edge):
 
 def compute_shortest_path(funnel, edge):
     """
-    Computes the shortest path through the funnel.
+    Computes the shortest path through the funnel, including all collinear (straight) bends.
 
     :param funnel: a Funnel object corresponding to the edge
     :param edge: an Edge object
