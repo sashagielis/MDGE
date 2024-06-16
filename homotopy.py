@@ -37,12 +37,12 @@ class Funnel:
             new_leftmost_point = self.fan[0]
 
             # If removed point was the apex, set new apex
-            if old_leftmost_point == self.apex:
+            if old_leftmost_point is self.apex:
                 self.apex = new_leftmost_point
                 self.tail.append(self.apex)
 
             # If leftmost point is the apex, the leftmost wedge is on the right concave chain of the fan
-            if new_leftmost_point == self.apex:
+            if new_leftmost_point is self.apex:
                 # If fan consists of only one point, we cannot shrink the funnel any further
                 if len(self.fan) == 1:
                     return
@@ -75,12 +75,12 @@ class Funnel:
             new_rightmost_point = self.fan[-1]
 
             # If removed point was the apex, set new apex
-            if old_rightmost_point == self.apex:
+            if old_rightmost_point is self.apex:
                 self.apex = new_rightmost_point
                 self.tail.append(self.apex)
 
             # If rightmost point is the apex, the rightmost wedge is on the left concave chain of the fan
-            if new_rightmost_point == self.apex:
+            if new_rightmost_point is self.apex:
                 # If fan consists of only one point, we cannot shrink the funnel any further
                 if len(self.fan) == 1:
                     return
@@ -102,7 +102,7 @@ class Funnel:
         """
         # Since the chains of the fan are concave, we can check for chain overlap starting from the apex
         apex_index = self.fan.index(self.apex)
-        while self.fan[0] != self.apex and self.fan[-1] != self.apex:
+        while self.fan[0] is not self.apex and self.fan[-1] is not self.apex:
             # Get the next point of the left chain and the next point of the right chain
             p1 = self.fan[apex_index - 1]
             p2 = self.fan[apex_index + 1]
@@ -145,7 +145,7 @@ class Funnel:
         for point in self.fan:
             result += str(point)
 
-            if point == self.apex:
+            if point is self.apex:
                 found_apex = True
 
             result += " <- " if not found_apex else " -> "
@@ -263,7 +263,7 @@ def compute_funnel(sequence, edge):
     # Add extra half-edge incident on v2 as 'crossing' to sequence to add v2 to the fan at the end
     last_crossing = sequence[-1]
     for he in edge.v2.outgoing_dt_edges:
-        if he.target == last_crossing.target:
+        if he.target is last_crossing.target:
             sequence.append(he)
             break
 
@@ -286,14 +286,14 @@ def compute_funnel(sequence, edge):
         # We then rebuild the fan starting from the first crossing not incident on the apex
         # In other words, we build a new funnel as the previous one (if any) cannot be grown any further
         if len(funnel.fan) == 1:
-            if next_crossing.origin != funnel.apex and next_crossing.target != funnel.apex:
+            if next_crossing.origin is not funnel.apex and next_crossing.target is not funnel.apex:
                 funnel.fan.appendleft(next_crossing.target)
                 funnel.fan.append(next_crossing.origin)
 
         # Otherwise, the next crossing differs in exactly one point from the current crossing
         # We then contract the funnel accordingly from the left or right
         else:
-            if current_crossing.origin == next_crossing.origin:
+            if current_crossing.origin is next_crossing.origin:
                 new_point = next_crossing.target
 
                 # Contract the funnel from the left inwards
@@ -341,13 +341,13 @@ def compute_shortest_path(funnel, edge):
     found_apex = False
 
     # If v2 is the leftmost point of the fan, the shortest path consists of the tail plus the left concave chain
-    if funnel.fan[0] == edge.v2:
+    if funnel.fan[0] is edge.v2:
         while funnel.fan:
             point = funnel.fan.pop()
 
             if found_apex:
                 shortest_path.append(point)
-            elif point == funnel.apex:
+            elif point is funnel.apex:
                 found_apex = True
 
     # Otherwise, the shortest path consists of the tail plus the right concave chain
@@ -357,7 +357,7 @@ def compute_shortest_path(funnel, edge):
 
             if found_apex:
                 shortest_path.append(point)
-            elif point == funnel.apex:
+            elif point is funnel.apex:
                 found_apex = True
 
     return shortest_path

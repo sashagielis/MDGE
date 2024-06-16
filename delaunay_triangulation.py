@@ -58,7 +58,7 @@ class Triangle:
         :returns: the half-edge from origin to target, or None if it is not part of the triangle
         """
         for he in self.half_edges:
-            if he.origin == origin and he.target == target:
+            if he.origin is origin and he.target is target:
                 return he
 
         return None

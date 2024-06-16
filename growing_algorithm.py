@@ -14,6 +14,10 @@ class GrowingAlgorithm:
         Follows growing algorithm by Duncan et al. (https://doi.org/10.1142/S0129054106004315).
         """
         crs = CompactRoutingStructure(self.instance)
-        print(crs)
 
         # TODO: Grow edges
+
+        # Unzip the bundles to obtain the singular thick edges
+        crs.unzip()
+
+        print(crs)

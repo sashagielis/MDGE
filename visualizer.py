@@ -53,28 +53,28 @@ def visualize(instance, folder, filename, thick_edges=True, show_axes=False, sho
             current_bundle = edge.elbow_bundle_v1.right
             while not done:
                 if type(current_bundle) == StraightBundle:
-                    left_eb = current_bundle.left
-                    right_eb = current_bundle.right
+                    eb_left = current_bundle.left
+                    eb_right = current_bundle.right
 
-                    p1 = left_eb.point
-                    p2 = right_eb.point
+                    p1 = eb_left.point
+                    p2 = eb_right.point
 
-                    # If left_eb is a terminal elbow, p1 is the left point of the straight
-                    # Otherwise, left_eb bends around p1 and compute offset of left point from p1 based on orientation
-                    if not left_eb.is_terminal:
-                        ang = left_eb.right_angle if left_eb.orientation == 1 else left_eb.left_angle
+                    # If eb_left is a terminal elbow, p1 is the left point of the straight
+                    # Otherwise, eb_left bends around p1 and compute offset of left point from p1 based on orientation
+                    if not eb_left.is_terminal:
+                        ang = eb_left.right_angle if eb_left.orientation == 1 else eb_left.left_angle
                         vec = Point(math.cos(ang), math.sin(ang))
                         direction = vec / vector_length(vec)
-                        magnitude = left_eb.layer_thickness + edge.thickness / 2
+                        magnitude = eb_left.layer_thickness + edge.thickness / 2
                         p1 += direction * magnitude
 
-                    # If right_eb is a terminal elbow, p2 is the right point of the straight
-                    # Otherwise, right_eb bends around p2 and compute offset of right point from p2 based on orientation
-                    if not right_eb.is_terminal:
-                        ang = right_eb.left_angle if right_eb.orientation == 1 else right_eb.right_angle
+                    # If eb_right is a terminal elbow, p2 is the right point of the straight
+                    # Otherwise, eb_right bends around p2 and compute offset of right point from p2 based on orientation
+                    if not eb_right.is_terminal:
+                        ang = eb_right.left_angle if eb_right.orientation == 1 else eb_right.right_angle
                         vec = Point(math.cos(ang), math.sin(ang))
                         direction = vec / vector_length(vec)
-                        magnitude = right_eb.layer_thickness + edge.thickness / 2
+                        magnitude = eb_right.layer_thickness + edge.thickness / 2
                         p2 += direction * magnitude
 
                     # Set segment corners of straight
