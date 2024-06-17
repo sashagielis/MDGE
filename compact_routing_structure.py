@@ -19,6 +19,14 @@ class StraightBundle:
         self.is_terminal = False  # Whether it is a terminal straight bundle (i.e. connected to a terminal elbow bundle)
         self.angle = None  # The angle of the straight bundle in radians
 
+    def is_associated_with(self, p):
+        """
+        Determines whether the straight bundle is associated with the given point.
+
+        :param p: a Point object
+        """
+        return self.left.point is p or self.right.point is p
+
     def is_connected_to(self, eb):
         """
         Determines whether the straight bundle is connected to the given elbow bundle.
@@ -46,19 +54,21 @@ class StraightBundle:
         :param sb: a StraightBundle object
         :param p: a Point object
         """
+        if not self.is_associated_with(p):
+            raise Exception(f"Straight bundle {self} is not associated with point {p}")
+
+        if not sb.is_associated_with(p):
+            raise Exception(f"Straight bundle {sb} is not associated with point {p}")
+
         if self.left.point is p:
             eb1 = self.left
-        elif self.right.point is p:
-            eb1 = self.right
         else:
-            raise Exception(f"Straight bundle {self} is not associated with point {p}")
+            eb1 = self.right
 
         if sb.left.point is p:
             eb2 = sb.left
-        elif sb.right.point is p:
-            eb2 = sb.right
         else:
-            raise Exception(f"Straight bundle {sb} is not associated with point {p}")
+            eb2 = sb.right
 
         return eb1.is_closer_than(eb2)
 
@@ -69,8 +79,7 @@ class StraightBundle:
 
         :param sb: a StraightBundle object
         """
-        if ((self.left.point is not sb.left.point and self.left.point is not sb.right.point)
-                or (self.right.point is not sb.right.point and self.right.point is not sb.left.point)):
+        if not self.is_associated_with(sb.left.point) or not self.is_associated_with(sb.right.point):
             raise Exception(f"Straight bundles {self} and {sb} are associated with different points")
 
         return self.left.point is sb.left.point
@@ -186,8 +195,7 @@ class ElbowBundle:
             # Handle the case where current_self, current_eb and the last straight are collinear
             if orientation(prev_self.point, current_self.point, current_eb.point) == 0:
                 # If the last bend was a right turn, self is closest if current_self is closer to prev_self
-                if ((not revert_self and prev_self.orientation == 1)
-                        or (revert_self and prev_self.orientation == 2)):
+                if (not revert_self and prev_self.orientation == 1) or (revert_self and prev_self.orientation == 2):
                     return on_segment(prev_self.point, current_eb.point, current_self.point)
 
                 # If the last bend was a left turn, self is closest if current_eb is closer to prev_self
@@ -424,14 +432,15 @@ class CompactRoutingStructure:
                 i += 1
                 continue
 
+            left_point = sb1.left.point
+            right_point = sb1.right.point
             j = i + 1
             while j < len(self.straight_bundles):
                 sb2 = self.straight_bundles[j]
 
-                # Only union sb1 with non-terminal straights sb2 that are associated with the same two points
-                if (not sb2.is_terminal
-                        and ((sb1.left.point is sb2.left.point or sb1.left.point is sb2.right.point)
-                             and (sb1.right.point is sb2.right.point and sb1.right.point is sb2.left.point))):
+                # Only union sb1 with non-terminal straight bundles sb2 that are associated with the same two points
+                # Do not increment j after calling union since it deletes sb2
+                if not sb2.is_terminal and sb2.is_associated_with(left_point) and sb2.is_associated_with(right_point):
                     self.union(sb1, sb2)
                 else:
                     j += 1
