@@ -108,13 +108,13 @@ def visualize(instance, folder, filename, thick_edges=True, show_axes=False, sho
                 current_bundle = current_bundle.right
 
             # Draw straights
-            plot.multi_polygons(straight_xs, straight_ys, line_alpha=0, fill_color=edge.color)
+            plot.multi_polygons(straight_xs, straight_ys, line_color=edge.color, fill_color=edge.color)
 
             # Draw elbows
             plot.annular_wedge(elbow_xs, elbow_ys,
                                inner_radius=inner_radii, outer_radius=outer_radii,
                                start_angle=start_angles, end_angle=end_angles,
-                               line_alpha=0, fill_color=edge.color)
+                               line_color=edge.color, fill_color=edge.color)
 
             # Draw outlines of straights
             plot.multi_line(straight_outline_xs, straight_outline_ys, line_color='black')

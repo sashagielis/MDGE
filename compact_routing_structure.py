@@ -1,7 +1,7 @@
 import copy
 import math
 
-from utils import angle, on_segment, orientation
+from utils import angle, on_segment, orientation, distance
 
 
 class StraightBundle:
@@ -422,6 +422,10 @@ class CompactRoutingStructure:
                 eb.right = eb_left
                 eb.orientation = 1
 
+                left_angle = eb.left_angle
+                eb.left_angle = eb.right_angle
+                eb.right_angle = left_angle
+
         # Combine non-maximal straight bundles using union, which also combines the non-maximal elbow bundles
         i = 0
         while i < len(self.straight_bundles) - 1:
@@ -749,6 +753,10 @@ class CompactRoutingStructure:
                     # Switch the elbow orientation from clockwise to counterclockwise
                     if type(current_bundle) == ElbowBundle:
                         current_bundle.orientation = 2
+
+                        left_angle = current_bundle.left_angle
+                        current_bundle.left_angle = current_bundle.right_angle
+                        current_bundle.right_angle = left_angle
 
                 prev_bundle = current_bundle
                 current_bundle = current_bundle.right
