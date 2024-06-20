@@ -1,7 +1,8 @@
 import copy
 import math
 
-from utils import angle, on_segment, orientation, distance
+from point import Point
+from utils import angle, distance, on_segment, orientation, vector_length
 
 
 class StraightBundle:
@@ -17,7 +18,6 @@ class StraightBundle:
 
         # Additional attributes
         self.is_terminal = False  # Whether it is a terminal straight bundle (i.e. connected to a terminal elbow bundle)
-        self.angle = None  # The angle of the straight bundle in radians
 
     def is_associated_with(self, p):
         """
@@ -84,6 +84,121 @@ class StraightBundle:
 
         return self.left.point is sb.left.point
 
+    def get_angle(self, t):
+        """
+        Returns the angle of the straight bundle in radians at the given time t, which is the angle of backbone p'q'.
+        Computes the angle by rotating line segment pq based on offsets d(p, p') and d(q, q') and elbow orientations.
+        The auxiliary file 'Computing angles of bundles.png' provides a more detailed explanation, including figures.
+
+        :param t: the time between 0 and 1
+        """
+        # Get the left and right endpoint p and q of the backbone of the thin straight bundle
+        eb_left = self.left
+        eb_right = self.right
+        p = eb_left.point
+        q = eb_right.point
+
+        # Compute the angle alpha of line segment pq
+        alpha = angle(p, q)
+
+        # If eb_left is a terminal elbow, p' = p is the left point of the straight's backbone with offset a = 0
+        if eb_left.is_terminal:
+            a = 0
+        # Otherwise, eb_left bends around p, and we compute the offset a = d(p, p') based on the separating thickness
+        else:
+            a = t * (eb_left.layer_thickness + eb_left.thickness / 2)
+
+        # If eb_right is a terminal elbow, q' = q is the right point of the straight's backbone with offset b = 0
+        if eb_right.is_terminal:
+            b = 0
+        # Otherwise, eb_right bends around q, and we compute the offset b = d(q, q') based on the separating thickness
+        else:
+            b = t * (eb_right.layer_thickness + eb_right.thickness / 2)
+
+        d_pq = distance(p, q)
+
+        # Compute the angle of rotation beta between line segments pq and p'q' using a and b
+        # If the elbow bundles have the same orientation, they are on the same 'side' of the straight bundle
+        if not (eb_left.right == self) ^ (eb_right.left == self):
+            beta = math.asin(abs(b - a) / d_pq)
+        # Otherwise, the elbow bundles are on different sides of the straight bundle
+        else:
+            beta = math.asin((a + b) / d_pq)
+
+        # Compute the angle of line segment p'q' using alpha and beta
+        # Case 1: the elbow bundles have the same orientation as the straight bundle
+        if eb_left.right == self and eb_right.left == self:
+            # If a < b, the rotation is counterclockwise
+            if a < b:
+                ang = alpha + beta
+            # Otherwise, the rotation is clockwise
+            else:
+                ang = alpha - beta
+        # Case 2: the elbow bundles have the same orientation but different from the straight bundle
+        elif eb_left.left == self and eb_right.right == self:
+            # If a < b, the rotation is clockwise
+            if a < b:
+                ang = alpha - beta
+            # Otherwise, the rotation is counterclockwise
+            else:
+                ang = alpha + beta
+        # Case 3: the elbow bundles have different orientations but eb_left has the same as the straight bundle
+        # Then, the rotation is clockwise
+        elif eb_left.right == self and eb_right.right == self:
+            ang = alpha - beta
+        # Case 4: the elbow bundles have different orientations but eb_right has the same as the straight bundle
+        # Then, the rotation is counterclockwise
+        else:
+            ang = alpha + beta
+
+        return ang
+
+    def get_backbone_endpoints(self, t):
+        """
+        Returns the two endpoints p1 and p2 of the backbone of the straight bundle at the given time t.
+
+        :param t: the time between 0 and 1
+        :returns: p1 and p2, ordered from left to right
+        """
+        eb_left = self.left
+        eb_right = self.right
+        p1 = eb_left.point
+        p2 = eb_right.point
+
+        # Get the angle of the straight bundle at time t
+        sb_angle = self.get_angle(t)
+
+        # The angles of the backbone endpoints wrt their elbow bundles are perpendicular to sb_angle
+        rotation = 0.5 * math.pi
+
+        # If eb_left is a terminal elbow, p1 is the left point of the backbone
+        # Otherwise, eb_left bends around p1, and we translate p1 based on sb_angle and separating thickness
+        if not eb_left.is_terminal:
+            if eb_left.right == self:
+                eb_left_angle = sb_angle + rotation
+            else:
+                eb_left_angle = sb_angle - rotation
+
+            vec = Point(math.cos(eb_left_angle), math.sin(eb_left_angle))
+            direction = vec / vector_length(vec)
+            magnitude = t * (eb_left.layer_thickness + self.thickness / 2)
+            p1 += direction * magnitude
+
+        # If eb_right is a terminal elbow, p2 is the right point of the backbone
+        # Otherwise, eb_right bends around p2, and we translate p2 based on sb_angle and separating thickness
+        if not eb_right.is_terminal:
+            if eb_right.left == self:
+                eb_right_angle = sb_angle + rotation
+            else:
+                eb_right_angle = sb_angle - rotation
+
+            vec = Point(math.cos(eb_right_angle), math.sin(eb_right_angle))
+            direction = vec / vector_length(vec)
+            magnitude = t * (eb_right.layer_thickness + self.thickness / 2)
+            p2 += direction * magnitude
+
+        return p1, p2
+
     def __str__(self):
         return f"{self.left} -> {self.right}"
 
@@ -105,8 +220,6 @@ class ElbowBundle:
 
         # Additional attributes
         self.is_terminal = False  # Whether it is a terminal elbow bundle (i.e., associated with a vertex or obstacle)
-        self.left_angle = None  # The left angle of the annular wedge in radians (None for terminal elbows)
-        self.right_angle = None  # The right angle of the annular wedge in radians (None for terminal elbows)
         self.orientation = 0  # The orientation of the elbows (0 : terminal, 1 : clockwise, 2 : counterclockwise)
 
     def is_connected_to(self, sb):
@@ -206,6 +319,38 @@ class ElbowBundle:
             else:
                 return orientation(prev_self.point, current_eb.point, current_self.point) == 1
 
+    def get_angles(self, t):
+        """
+        Returns the two angles a1 and a2 of the annular wedge in radians at the given time t, or None if it is terminal.
+
+        :param t: the time between 0 and 1
+        :returns: a1 and a2, ordered from left to right
+        """
+        if self.is_terminal:
+            return None
+
+        sb_left = self.left
+        sb_right = self.right
+
+        # The angles of the annular wedge are perpendicular to the angles of the adjacent straight bundles
+        rotation = 0.5 * math.pi
+
+        # Compute the left angle by rotating the angle of the left straight bundle
+        sb_left_angle = sb_left.get_angle(t)
+        if sb_left.right == self:
+            a1 = sb_left_angle + rotation
+        else:
+            a1 = sb_left_angle - rotation
+
+        # Compute the right angle by rotating the angle of the right straight bundle
+        sb_right_angle = sb_right.get_angle(t)
+        if sb_right.left == self:
+            a2 = sb_right_angle + rotation
+        else:
+            a2 = sb_right_angle - rotation
+
+        return a1, a2
+
     def __str__(self):
         return f"{self.point}"
 
@@ -299,9 +444,6 @@ class CompactRoutingStructure:
                 sb = StraightBundle()
                 straight_bundles.append(sb)
 
-                # Set angle of sb
-                sb.angle = angle(p1, p2)
-
                 # If p1 = v1 is the first point, we construct a terminal elbow bundle around v1
                 if i == 0:
                     eb1 = ElbowBundle()
@@ -314,7 +456,7 @@ class CompactRoutingStructure:
                     eb1.size = 1
                     eb1.thickness = edge.thickness
 
-                    # Set is_terminal and orientation
+                    # Set is_terminal
                     eb1.is_terminal = True
                     eb1.left.is_terminal = True
 
@@ -327,16 +469,6 @@ class CompactRoutingStructure:
 
                     # Set orientation of eb1
                     eb1.orientation = bend_orientations[i - 1]
-
-                    # Set left and right angle of eb1 based on orientation
-                    prev_sb = eb1.left
-                    rotation = 0.5 * math.pi
-                    if eb1.orientation == 1:
-                        eb1.left_angle = prev_sb.angle + rotation
-                        eb1.right_angle = sb.angle + rotation
-                    else:
-                        eb1.left_angle = sb.angle - rotation
-                        eb1.right_angle = prev_sb.angle - rotation
 
                 # Construct elbow bundle around p2
                 eb2 = ElbowBundle()
@@ -356,7 +488,7 @@ class CompactRoutingStructure:
                 if i == len(edge.path) - 2:
                     eb2.right = sb
 
-                    # Set is_terminal and orientation
+                    # Set is_terminal
                     eb2.is_terminal = True
                     eb2.right.is_terminal = True
 
@@ -422,10 +554,6 @@ class CompactRoutingStructure:
                 eb.right = eb_left
                 eb.orientation = 1
 
-                left_angle = eb.left_angle
-                eb.left_angle = eb.right_angle
-                eb.right_angle = left_angle
-
         # Combine non-maximal straight bundles using union, which also combines the non-maximal elbow bundles
         i = 0
         while i < len(self.straight_bundles) - 1:
@@ -451,43 +579,62 @@ class CompactRoutingStructure:
 
             i += 1
 
-    def split(self, sb, x):
+    def split(self, sb, x, t):
         """
-        Splits straight bundle sb into a straight-elbow-straight bundle sequence sb1, eb, sb2.
+        Splits straight bundle sb(t) into a straight-elbow-straight bundle sequence sb(t), eb(t), sb2(t).
         Elbow bundle eb is degenerate and touches the elbow bundle x.
 
         :param sb: a StraightBundle object
         :param x: an ElbowBundle object
+        :param t: the time between 0 and 1
         """
-        sb2 = sb.copy()
+        sb2 = copy.copy(sb)
         self.straight_bundles.append(sb2)
 
         eb = ElbowBundle()
         self.elbow_bundles.append(eb)
 
-        sb.right = eb
-        sb2.left = eb
+        # Get the left and right endpoints of the backbone of sb
+        p1, p2 = sb.get_backbone_endpoints(t)
 
+        # Set left and right of the straight bundles based on orientation
+        if orientation(x.point, p1, p2) == 1:
+            sb.right = eb
+            sb2.left = eb
+        else:
+            sb.left = eb
+            sb2.right = eb
+
+        # Set properties of eb
+        eb.point = x.point
         eb.left = sb
         eb.right = sb2
         eb.inner = x
-
         eb.size = sb.size
         eb.thickness = sb.thickness
+        eb.layer_thickness = x.layer_thickness + x.thickness / 2 if x.is_terminal else x.layer_thickness + x.thickness
+        eb.orientation = 1
 
-        eb.layer_W = x.layer_W + x.thickness
+        # Update the elbow bundles on the right to point to sb2
+        eb_right = sb2.right if sb2.left == eb else sb2.left
+        while eb_right.is_connected_to(sb):
+            if eb_right.left == sb:
+                eb_right.left = sb2
+            else:
+                eb_right.right = sb2
 
-        eb_right = sb2.right
-
-        while eb_right.left == sb:
-            eb_right.left = sb2
             eb_right = eb_right.inner
 
-        if x.left.left.point is sb.left.point:
-            self.union(sb, x.left)
+        if not x.is_terminal:
+            # Check if sb must unite with x's left straight bundle
+            eb_left_of_x = x.left.next(x)
+            if sb.is_associated_with(eb_left_of_x.point):
+                self.union(sb, x.left)
 
-        if x.right.right.point is sb2.right.point:
-            self.union(sb2, x.right)
+            # Check if sb2 must unite with x's right straight bundle
+            eb_right_of_x = x.right.next(x)
+            if sb2.is_associated_with(eb_right_of_x.point):
+                self.union(sb2, x.right)
 
     def merge(self, sb1, eb, sb2):
         """
@@ -509,6 +656,13 @@ class CompactRoutingStructure:
         :param x: a StraightBundle (resp. ElbowBundle) object
         :param y: a StraightBundle (resp. ElbowBundle) object
         """
+        if type(x) != type(y):
+            raise Exception(f"Cannot union {type(x)} {x} and {type(y)} {y}")
+
+        # Do not union terminal bundles
+        if x.is_terminal or y.is_terminal:
+            return
+
         x.size += y.size
         x.thickness += y.thickness
 
@@ -568,7 +722,7 @@ class CompactRoutingStructure:
 
             # Remove the degenerate straight bundle y
             self.straight_bundles.remove(y)
-        elif type(x) == type(y) == ElbowBundle:
+        else:
             # If y is closer to the point than x, we only need to update inner and layer_thickness of x
             if y.is_closer_than(x):
                 x.inner = y.inner
@@ -590,8 +744,6 @@ class CompactRoutingStructure:
 
             # Remove the degenerate elbow bundle y
             self.elbow_bundles.remove(y)
-        else:
-            raise Exception(f"Cannot union {type(x)} {x} and {type(y)} {y}")
 
     def divide(self, sb, eb):
         """
@@ -745,21 +897,9 @@ class CompactRoutingStructure:
             while not current_bundle.is_terminal:
                 current_bundle.thickness = edge.thickness
 
-                # If necessary, switch left and right such that we always move along the bundles towards the right
-                if current_bundle.right == prev_bundle:
-                    current_bundle.right = current_bundle.left
-                    current_bundle.left = prev_bundle
-
-                    # Switch the elbow orientation from clockwise to counterclockwise
-                    if type(current_bundle) == ElbowBundle:
-                        current_bundle.orientation = 2
-
-                        left_angle = current_bundle.left_angle
-                        current_bundle.left_angle = current_bundle.right_angle
-                        current_bundle.right_angle = left_angle
-
-                prev_bundle = current_bundle
-                current_bundle = current_bundle.right
+                current_b = current_bundle
+                current_bundle = current_bundle.next(prev_bundle)
+                prev_bundle = current_b
 
         # Now we can also recompute the layer_thickness of the elbow bundles using the inner and thickness fields
         for eb in self.elbow_bundles:

@@ -12,7 +12,7 @@ from compact_routing_structure import StraightBundle
 from delaunay_triangulation import DelaunayTriangulation
 from obstacle import PointObstacle
 from point import Point
-from utils import angle, distance, vector_length
+from utils import angle, distance
 
 # Minimum visible point diameter and edge width
 min_point_radius = 0.5
@@ -50,32 +50,12 @@ def visualize(instance, folder, filename, thick_edges=True, show_axes=False, sho
             start_angles, end_angles = [], []
 
             done = False
-            current_bundle = edge.elbow_bundle_v1.right
+            prev_bundle = edge.elbow_bundle_v1
+            current_bundle = prev_bundle.right
             while not done:
                 if type(current_bundle) == StraightBundle:
-                    eb_left = current_bundle.left
-                    eb_right = current_bundle.right
-
-                    p1 = eb_left.point
-                    p2 = eb_right.point
-
-                    # If eb_left is a terminal elbow, p1 is the left point of the straight
-                    # Otherwise, eb_left bends around p1 and compute offset of left point from p1 based on orientation
-                    if not eb_left.is_terminal:
-                        ang = eb_left.right_angle if eb_left.orientation == 1 else eb_left.left_angle
-                        vec = Point(math.cos(ang), math.sin(ang))
-                        direction = vec / vector_length(vec)
-                        magnitude = eb_left.layer_thickness + edge.thickness / 2
-                        p1 += direction * magnitude
-
-                    # If eb_right is a terminal elbow, p2 is the right point of the straight
-                    # Otherwise, eb_right bends around p2 and compute offset of right point from p2 based on orientation
-                    if not eb_right.is_terminal:
-                        ang = eb_right.left_angle if eb_right.orientation == 1 else eb_right.right_angle
-                        vec = Point(math.cos(ang), math.sin(ang))
-                        direction = vec / vector_length(vec)
-                        magnitude = eb_right.layer_thickness + edge.thickness / 2
-                        p2 += direction * magnitude
+                    # Get the left and right endpoint of the bundle's backbone
+                    p1, p2 = current_bundle.get_backbone_endpoints(1)
 
                     # Set segment corners of straight
                     segment_corners = get_thick_segment_corners(p1, p2, edge.thickness)
@@ -101,11 +81,14 @@ def visualize(instance, folder, filename, thick_edges=True, show_axes=False, sho
                     outer_radii.append(current_bundle.layer_thickness + current_bundle.thickness)
 
                     # Set angles of annular wedge
-                    start_angles.append(current_bundle.right_angle)
-                    end_angles.append(current_bundle.left_angle)
+                    a1, a2 = current_bundle.get_angles(1)
+                    start_angles.append(a2)
+                    end_angles.append(a1)
 
                 # Move to the next bundle of the thick edge
-                current_bundle = current_bundle.right
+                current_b = current_bundle
+                current_bundle = current_bundle.next(prev_bundle)
+                prev_bundle = current_b
 
             # Draw straights
             plot.multi_polygons(straight_xs, straight_ys, line_color=edge.color, fill_color=edge.color)
