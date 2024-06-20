@@ -616,7 +616,7 @@ class CompactRoutingStructure:
         eb.orientation = 1
 
         # Update the elbow bundles on the right to point to sb2
-        eb_right = sb2.right if sb2.left == eb else sb2.left
+        eb_right = sb2.next(eb)
         while eb_right.is_connected_to(sb):
             if eb_right.left == sb:
                 eb_right.left = sb2
@@ -638,14 +638,39 @@ class CompactRoutingStructure:
 
     def merge(self, sb1, eb, sb2):
         """
-        Merges straight-elbow-straight bundle sequence sb1, eb, sb2 into a single straight bundle sb.
+        Merges straight-elbow-straight bundle sequence sb1, eb, sb2 into a single straight bundle.
         Elbow bundle eb must be degenerate and of zero length.
+        Bundle sb1 will become the merged straight bundle.
 
         :param sb1: a StraightBundle object
         :param eb: an ElbowBundle object
         :param sb2: a StraightBundle object
         """
-        return
+        if sb1.size > eb.size:
+            self.divide(sb1, eb)
+
+        if sb2.size > eb.size:
+            self.divide(sb2, eb)
+
+        # Set right of sb1 to new right elbow bundle
+        eb_right = sb2.next(eb)
+        if sb1.right == eb:
+            sb1.right = eb_right
+        else:
+            sb1.left = eb_right
+
+        # Update the elbow bundles on the right to point to sb1
+        while eb_right.is_connected_to(sb2):
+            if eb_right.left == sb2:
+                eb_right.left = sb1
+            else:
+                eb_right.right = sb1
+
+            eb_right = eb_right.inner
+
+        # Delete eb and sb2
+        self.elbow_bundles.remove(eb)
+        self.straight_bundles.remove(sb2)
 
     def union(self, x, y):
         """
@@ -747,9 +772,9 @@ class CompactRoutingStructure:
 
     def divide(self, sb, eb):
         """
-        Splits straight bundle sb at the adjacent elbow bundle eb into two interior-disjoint straight bundles sb1 and sb2.
-        Straight bundles sb1 and sb2 have the same associated vertices and (temporarily) share a straight segment.
-        This is used in preparation for removing the degenerate bundle eb by merging sb1 with the other straight bundle adjacent to eb.
+        Splits straight bundle sb at the adjacent elbow bundle eb into two interior-disjoint straight bundles.
+        The new straight bundles have the same associated vertices and (temporarily) share a straight segment.
+        This is used before removing the degenerate bundle eb when merging sb with eb and eb's other straight bundle.
         The two divided straight bundles will then no longer be adjacent to the same vertices.
 
         :param sb: a StraightBundle object
