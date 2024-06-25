@@ -199,6 +199,37 @@ class StraightBundle:
 
         return p1, p2
 
+    def get_corners(self, t):
+        """
+        Returns the four corners of the straight bundle at the given time t.
+        Source: https://stackoverflow.com/questions/41898990/find-corners-of-a-rotated-rectangle-given-its-center-point
+        -and-rotation
+
+        :param t: the time between 0 and 1
+        :returns: the four corner points, ordered top right, top left, bottom left, bottom right
+        """
+        p1, p2 = self.get_backbone_endpoints(t)
+
+        length = distance(p1, p2)
+        theta = angle(p1, p2)
+        center = Point((p1.x + p2.x) / 2, (p1.y + p2.y) / 2)
+
+        thickness = t * self.thickness
+
+        tr_x = center.x + length / 2 * math.cos(theta) - thickness / 2 * math.sin(theta)
+        tr_y = center.y + length / 2 * math.sin(theta) + thickness / 2 * math.cos(theta)
+
+        tl_x = center.x - length / 2 * math.cos(theta) - thickness / 2 * math.sin(theta)
+        tl_y = center.y - length / 2 * math.sin(theta) + thickness / 2 * math.cos(theta)
+
+        bl_x = center.x - length / 2 * math.cos(theta) + thickness / 2 * math.sin(theta)
+        bl_y = center.y - length / 2 * math.sin(theta) - thickness / 2 * math.cos(theta)
+
+        br_x = center.x + length / 2 * math.cos(theta) + thickness / 2 * math.sin(theta)
+        br_y = center.y + length / 2 * math.sin(theta) - thickness / 2 * math.cos(theta)
+
+        return [Point(tr_x, tr_y), Point(tl_x, tl_y), Point(bl_x, bl_y), Point(br_x, br_y)]
+
     def __str__(self):
         return f"{self.left} -> {self.right}"
 
@@ -605,7 +636,7 @@ class CompactRoutingStructure:
             sb.left = eb
             sb2.right = eb
 
-        # Due to the split, sb and sb2 may become terminal if they were not, or may no longer be terminal if they were
+        # Due to the split, sb and sb2 may become or may no longer be terminal
         sb.is_terminal = sb.next(eb).is_terminal
         sb2.is_terminal = sb2.next(eb).is_terminal
 
@@ -617,7 +648,6 @@ class CompactRoutingStructure:
         eb.size = sb.size
         eb.thickness = sb.thickness
         eb.layer_thickness = x.layer_thickness + x.thickness / 2 if x.is_terminal else x.layer_thickness + x.thickness
-        eb.orientation = 1
 
         # Update the elbow bundles on the right to point to sb2
         eb_right = sb2.next(eb)
@@ -670,6 +700,7 @@ class CompactRoutingStructure:
         else:
             sb1.left = eb_right
 
+        # Due to the merge, sb1 may become terminal
         sb1.is_terminal = sb1.is_terminal or sb2.is_terminal
 
         # Update the elbow bundles on the right to point to sb1

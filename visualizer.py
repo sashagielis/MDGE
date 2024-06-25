@@ -54,11 +54,8 @@ def visualize(instance, folder, filename, thick_edges=True, show_axes=False, sho
             current_bundle = prev_bundle.right
             while not done:
                 if type(current_bundle) == StraightBundle:
-                    # Get the left and right endpoint of the bundle's backbone
-                    p1, p2 = current_bundle.get_backbone_endpoints(1)
-
                     # Set segment corners of straight
-                    segment_corners = get_thick_segment_corners(p1, p2, edge.thickness)
+                    segment_corners = current_bundle.get_corners(1)
                     straight_xs.append([[[corner.x for corner in segment_corners]]])
                     straight_ys.append([[[corner.y for corner in segment_corners]]])
 
@@ -155,27 +152,3 @@ def visualize(instance, folder, filename, thick_edges=True, show_axes=False, sho
 
     Path(folder).mkdir(parents=True, exist_ok=True)
     os.replace(f'{instance.name}.png', f'{folder}/{filename}.png')
-
-
-def get_thick_segment_corners(p1, p2, thickness):
-    """
-    Returns the four corners of the rectangle forming a thick line segment between points p1 and p2.
-    Source: https://stackoverflow.com/questions/41898990/find-corners-of-a-rotated-rectangle-given-its-center-point-and-rotation
-    """
-    length = distance(p1, p2)
-    theta = angle(p1, p2)
-    center = Point((p1.x + p2.x) / 2, (p1.y + p2.y) / 2)
-
-    tr_x = center.x + length / 2 * math.cos(theta) - thickness / 2 * math.sin(theta)
-    tr_y = center.y + length / 2 * math.sin(theta) + thickness / 2 * math.cos(theta)
-
-    tl_x = center.x - length / 2 * math.cos(theta) - thickness / 2 * math.sin(theta)
-    tl_y = center.y - length / 2 * math.sin(theta) + thickness / 2 * math.cos(theta)
-
-    bl_x = center.x - length / 2 * math.cos(theta) + thickness / 2 * math.sin(theta)
-    bl_y = center.y - length / 2 * math.sin(theta) - thickness / 2 * math.cos(theta)
-
-    br_x = center.x + length / 2 * math.cos(theta) + thickness / 2 * math.sin(theta)
-    br_y = center.y + length / 2 * math.sin(theta) - thickness / 2 * math.cos(theta)
-    
-    return [Point(tr_x, tr_y), Point(tl_x, tl_y), Point(bl_x, bl_y), Point(br_x, br_y)]

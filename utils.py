@@ -155,20 +155,67 @@ def check_segment_line_intersection(p1, q1, p2, q2):
         return False
 
 
-def check_segment_half_line_intersection(p1, q1, p2, q2):
+def check_segment_arc_intersection(p, q, c, r, a1, a2):
     """
-    Determines whether line segment p1q1 and the half-line with origin p2 and another point q2 intersect.
+    Determines whether line segment pq and the arc with center c, radius r and angles a1 and a2 intersect.
     """
-    if not check_segment_line_intersection(p1, q1, p2, q2):
+    # We define the line through p and q as a function of the time t, where 0 <= t <= 1 for segment pq
+    # We then substitute it into the equation of the circle with center c and radius r
+    # By solving the resulting equation for t we can determine the times of intersection of the line with the circle
+    dx, dy = q.x - p.x, q.y - p.y
+    a = dx ** 2 + dy ** 2
+    b = 2 * (dx * (p.x - c.x) + dy * (p.y - c.y))
+    c = (p.x - c.x) ** 2 + (p.y - c.y) ** 2 - r ** 2
+
+    discriminant = b ** 2 - 4 * a * c
+    if discriminant < 0:
         return False
 
-    o_p1 = orientation(p2, q2, p1)
-    o_q1 = orientation(p2, q2, q1)
+    t1 = (-b - math.sqrt(discriminant)) / (2 * a)
+    t2 = (-b + math.sqrt(discriminant)) / (2 * a)
 
-    if o_p1 == 2 or o_q1 == 1:
-        return angle_around_point(q1, p2, p1) <= 180
-    elif o_p1 == 1 or o_q1 == 2:
-        return angle_around_point(p1, p2, q1) <= 180
-    else:
-        # p1q1 and p2q2 are collinear
-        return on_half_line(p2, q2, p1) or on_half_line(p2, q2, q1)
+    # Segment pq only intersects the circle if the time of intersection is between 0 and 1
+    if 0 <= t1 <= 1:
+        intersection = p + t1 * (q - p)
+
+        # Check if the intersection lies between the two angles of the arc
+        if a1 > angle(c, intersection) > a2:
+            return True
+
+    if 0 <= t2 <= 1:
+        intersection = p + t2 * (q - p)
+
+        # Check if the intersection lies between the two angles of the arc
+        if a1 > angle(c, intersection) > a2:
+            return True
+
+    return False
+
+
+def check_rectangle_arc_intersection(p1, p2, p3, p4, c, r, a1, a2):
+    """
+    Determines whether the rectangle p1p2p3p4 and the arc with center c, radius r and angles a1 and a2 intersect.
+    The corner points of the rectangle must be given in their order along the boundary (in either direction).
+    """
+    # Determine the dimensions of the rectangle
+    rec_points = [p1, p2, p3, p4]
+    min_x = min(p.x for p in rec_points)
+    max_x = max(p.x for p in rec_points)
+    min_y = min(p.y for p in rec_points)
+    max_y = max(p.y for p in rec_points)
+
+    # Check if one of the arc's endpoints is inside the rectangle
+    arc_p1 = c + r * math.cos(a1)
+    arc_p2 = c + r * math.cos(a2)
+    arc_points = [arc_p1, arc_p2]
+    for p in arc_points:
+        if min_x <= p.x <= max_x and min_y <= p.y <= max_y:
+            return True
+
+    # Check if one of the sides of the rectangle intersects the arc
+    sides = [[p1, p2], [p2, p3], [p3, p4], [p4, p1]]
+    for side in sides:
+        if check_segment_arc_intersection(side[0], side[1], c, r, a1, a2):
+            return True
+
+    return False
