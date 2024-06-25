@@ -605,6 +605,10 @@ class CompactRoutingStructure:
             sb.left = eb
             sb2.right = eb
 
+        # Due to the split, sb and sb2 may become terminal if they were not, or may no longer be terminal if they were
+        sb.is_terminal = sb.next(eb).is_terminal
+        sb2.is_terminal = sb2.next(eb).is_terminal
+
         # Set properties of eb
         eb.point = x.point
         eb.left = sb
@@ -617,7 +621,7 @@ class CompactRoutingStructure:
 
         # Update the elbow bundles on the right to point to sb2
         eb_right = sb2.next(eb)
-        while eb_right.is_connected_to(sb):
+        while eb_right is not None and eb_right.is_connected_to(sb):
             if eb_right.left == sb:
                 eb_right.left = sb2
             else:
@@ -646,9 +650,16 @@ class CompactRoutingStructure:
         :param eb: an ElbowBundle object
         :param sb2: a StraightBundle object
         """
+        if not sb1.is_connected_to(eb):
+            raise Exception(f"Straight bundle {sb1} is not connected to elbow bundle {eb}")
+
+        if not sb2.is_connected_to(eb):
+            raise Exception(f"Straight bundle {sb2} is not connected to elbow bundle {eb}")
+
+        # If sb1 or sb2 contains more segments than eb, we cannot directly merge the bundles together
+        # Therefore, we first have to divide them such that all three bundles have the same size
         if sb1.size > eb.size:
             self.divide(sb1, eb)
-
         if sb2.size > eb.size:
             self.divide(sb2, eb)
 
@@ -659,8 +670,10 @@ class CompactRoutingStructure:
         else:
             sb1.left = eb_right
 
+        sb1.is_terminal = sb1.is_terminal or sb2.is_terminal
+
         # Update the elbow bundles on the right to point to sb1
-        while eb_right.is_connected_to(sb2):
+        while eb_right is not None and eb_right.is_connected_to(sb2):
             if eb_right.left == sb2:
                 eb_right.left = sb1
             else:
@@ -774,13 +787,134 @@ class CompactRoutingStructure:
         """
         Splits straight bundle sb at the adjacent elbow bundle eb into two interior-disjoint straight bundles.
         The new straight bundles have the same associated vertices and (temporarily) share a straight segment.
-        This is used before removing the degenerate bundle eb when merging sb with eb and eb's other straight bundle.
-        The two divided straight bundles will then no longer be adjacent to the same vertices.
+        This is used before removing the degenerate bundle eb when merging sb with eb and another straight bundle.
+        The two divided straight bundles will no longer be adjacent to the same points after completing the merge.
 
         :param sb: a StraightBundle object
         :param eb: an ElbowBundle object
         """
-        return
+        # sb will become the outermost straight bundle adjacent to eb with the same size as eb
+        # Therefore, we create a new straight bundle sb2 which will form the remaining bundle after tearing off sb
+        sb2 = copy.copy(sb)
+        self.straight_bundles.append(sb2)
+
+        # Connect sb2 to the inner elbow bundle of eb
+        if sb2.right == eb:
+            sb2.right = eb.inner
+        else:
+            sb2.left = eb.inner
+
+        # Update the inner elbow bundles referencing sb to reference sb2
+        eb_inner = eb.inner
+        while eb_inner is not None and eb_inner.is_connected_to(sb):
+            if eb_inner.left == sb:
+                eb_inner.left = sb2
+            else:
+                eb_inner.right = sb2
+
+            eb_inner = eb_inner.inner
+
+        sb.size = eb.size
+        sb.thickness = eb.thickness
+
+        sb2.size -= sb.size
+        sb2.thickness -= sb.thickness
+
+        # Consider the next (outermost) elbow bundle on the other side of the straight bundles
+        eb_next = sb.next(eb)
+        size = eb_next.size
+        thickness = eb_next.thickness
+
+        # Determine the directions of the elbow bundles
+        dir_eb = eb.left == sb
+        dir_eb_next = eb_next.right == sb
+
+        # We already assumed that sb will be connected to eb
+        # If the elbow bundles on either side have the same orientation, eb_next will be the other elbow bundle of sb
+        if dir_eb == dir_eb_next:
+            # Go over the elbow bundles from eb_next inwards until their combined size is at least the size of sb
+            while size < sb.size:
+                eb_next = eb_next.inner
+
+                size += eb_next.size
+                thickness += eb_next.thickness
+
+            # If size is larger than sb's size, the current elbow bundle eb_next must be split
+            if size > sb.size:
+                # eb_next will become the elbow bundle that is still adjacent to sb
+                # Therefore, we create a new elbow bundle eb_new which will form the remaining elbow bundle
+                eb_new = copy.copy(eb_next)
+                self.elbow_bundles.append(eb_new)
+
+                eb_next.inner = eb_new
+
+                eb_new.size = size - sb.size
+                eb_new.thickness = thickness - sb.thickness
+
+                eb_next.size -= eb_new.size
+                eb_next.thickness -= eb_new.thickness
+                eb_next.layer_thickness = eb_new.layer_thickness + eb_new.thickness
+
+            # eb_next is the last elbow bundle adjacent to sb
+            # Therefore, its inner elbow bundle is the outermost elbow bundle of sb2
+            eb_next = eb_next.inner
+            if sb2.right == eb.inner:
+                sb2.left = eb_next
+            else:
+                sb2.right = eb_next
+
+            # Update the inner elbow bundles referencing sb to reference sb2
+            while eb_next is not None and eb_next.is_connected_to(sb):
+                if eb_next.right == sb:
+                    eb_next.right = sb2
+                else:
+                    eb_next.left = sb2
+
+                eb_next = eb_next.inner
+
+        # Otherwise, eb_next will be the other elbow bundle of sb2
+        else:
+            # Go over the elbow bundles from eb_next inwards until their combined size is at least the size of sb2
+            while size < sb2.size:
+                # Update the inner elbow bundles referencing sb to reference sb2
+                if eb_next.left == sb:
+                    eb_next.left = sb2
+                else:
+                    eb_next.right = sb2
+
+                eb_next = eb_next.inner
+
+                size += eb_next.size
+                thickness += eb_next.thickness
+
+            # If size is larger than sb2's size, the current elbow bundle eb_next must be split
+            if size > sb2.size:
+                # eb_next will become the elbow bundle that is still adjacent to sb2
+                # Therefore, we create a new elbow bundle eb_new which will form the remaining elbow bundle
+                eb_new = copy.copy(eb_next)
+                self.elbow_bundles.append(eb_new)
+
+                eb_next.inner = eb_new
+
+                eb_new.size = size - sb2.size
+                eb_new.thickness = thickness - sb2.thickness
+
+                eb_next.size -= eb_new.size
+                eb_next.thickness -= eb_new.thickness
+                eb_next.layer_thickness = eb_new.layer_thickness + eb_new.thickness
+
+            # eb_next is the last elbow bundle adjacent to sb2, but it does not reference sb2 yet
+            if eb_next.left == sb:
+                eb_next.left = sb2
+            else:
+                eb_next.right = sb2
+
+            # The inner elbow bundle of eb_next is the outermost elbow bundle of sb
+            eb_next = eb_next.inner
+            if sb.left == eb:
+                sb.right = eb_next
+            else:
+                sb.left = eb_next
 
     def tear(self, b):
         """
