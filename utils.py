@@ -1,4 +1,5 @@
 import math
+from fractions import Fraction
 
 from point import Point
 
@@ -28,16 +29,39 @@ def angle(p, q):
     dx = q.x - p.x
     dy = q.y - p.y
 
-    return math.atan2(dy, dx)
+    return normalize_angle(math.atan2(dy, dx))
 
 
-def angle_around_point(p, q, r):
+def normalize_angle(a):
     """
-    Determines the counterclockwise angle in degrees by turning from p to r around q.
+    Normalizes an angle in radians to the range [0, 2π].
     """
-    ang = math.degrees(angle(q, r) - angle(q, p))
+    full_rotation = Fraction(2 * math.pi)
 
-    return ang + 360 if ang < 0 else ang
+    while a < 0:
+        a += full_rotation
+
+    while a > 2 * math.pi:
+        a -= full_rotation
+
+    return a
+
+
+def rotation_angle(a1, a2):
+    """
+    Determines the counterclockwise angle of rotation from angle a1 to angle a2 in radians.
+    """
+    a1 = normalize_angle(a1)
+    a2 = normalize_angle(a2)
+
+    rotation = a1 - a2
+
+    if rotation > 0:
+        rotation = 2 * math.pi - rotation
+    else:
+        rotation = -rotation
+
+    return rotation
 
 
 def vector_length(p):
@@ -155,17 +179,19 @@ def check_segment_line_intersection(p1, q1, p2, q2):
         return False
 
 
-def check_segment_arc_intersection(p, q, c, r, a1, a2):
+def check_segment_arc_intersection(p, q, center, radius, left_angle, right_angle, proper_intersect):
     """
-    Determines whether line segment pq and the arc with center c, radius r and angles a1 and a2 intersect.
+    Determines whether line segment pq and the arc with given center, radius and angles intersect.
+    The angles of the arc must be given in clockwise order in radians.
+    If proper_intersect is True, we only register proper intersections, i.e., not tangent.
     """
     # We define the line through p and q as a function of the time t, where 0 <= t <= 1 for segment pq
     # We then substitute it into the equation of the circle with center c and radius r
     # By solving the resulting equation for t we can determine the times of intersection of the line with the circle
     dx, dy = q.x - p.x, q.y - p.y
     a = dx ** 2 + dy ** 2
-    b = 2 * (dx * (p.x - c.x) + dy * (p.y - c.y))
-    c = (p.x - c.x) ** 2 + (p.y - c.y) ** 2 - r ** 2
+    b = 2 * (dx * (p.x - center.x) + dy * (p.y - center.y))
+    c = (p.x - center.x) ** 2 + (p.y - center.y) ** 2 - radius ** 2
 
     discriminant = b ** 2 - 4 * a * c
     if discriminant < 0:
@@ -174,48 +200,65 @@ def check_segment_arc_intersection(p, q, c, r, a1, a2):
     t1 = (-b - math.sqrt(discriminant)) / (2 * a)
     t2 = (-b + math.sqrt(discriminant)) / (2 * a)
 
+    # If t1 = t2, the line and circle are tangent and thus the intersection is not proper
+    if proper_intersect and t1 == t2:
+        return False
+
+    # Normalize the angles
+    left_angle = normalize_angle(left_angle)
+    right_angle = normalize_angle(right_angle)
+
     # Segment pq only intersects the circle if the time of intersection is between 0 and 1
     if 0 <= t1 <= 1:
         intersection = p + t1 * (q - p)
 
         # Check if the intersection lies between the two angles of the arc
-        if a1 > angle(c, intersection) > a2:
+        if left_angle >= angle(center, intersection) >= right_angle:
             return True
 
     if 0 <= t2 <= 1:
         intersection = p + t2 * (q - p)
 
         # Check if the intersection lies between the two angles of the arc
-        if a1 > angle(c, intersection) > a2:
+        if left_angle >= angle(center, intersection) >= right_angle:
             return True
 
     return False
 
 
-def check_rectangle_arc_intersection(p1, p2, p3, p4, c, r, a1, a2):
+def check_rectangle_arc_intersection(p1, p2, p3, p4, center, radius, left_angle, right_angle, proper_intersect):
     """
-    Determines whether the rectangle p1p2p3p4 and the arc with center c, radius r and angles a1 and a2 intersect.
-    The corner points of the rectangle must be given in their order along the boundary (in either direction).
+    Determines whether the rectangle p1p2p3p4 and the arc with given center, radius and angles intersect.
+    The corner points of the rectangle must be given in counterclockwise order along the boundary.
+    The angles of the arc must be given in clockwise order in radians.
+    If proper_intersect is True, we only register proper intersections, i.e., not tangent.
     """
-    # Determine the dimensions of the rectangle
-    rec_points = [p1, p2, p3, p4]
-    min_x = min(p.x for p in rec_points)
-    max_x = max(p.x for p in rec_points)
-    min_y = min(p.y for p in rec_points)
-    max_y = max(p.y for p in rec_points)
+    rec_sides = [[p1, p2], [p2, p3], [p3, p4], [p4, p1]]
 
-    # Check if one of the arc's endpoints is inside the rectangle
-    arc_p1 = c + r * math.cos(a1)
-    arc_p2 = c + r * math.cos(a2)
+    # Normalize the angles
+    left_angle = normalize_angle(left_angle)
+    right_angle = normalize_angle(right_angle)
+
+    # Check if one of the arc's endpoints intersects the rectangle
+    arc_p1 = center + radius * Point(math.cos(left_angle), math.sin(left_angle))
+    arc_p2 = center + radius * Point(math.cos(right_angle), math.sin(right_angle))
     arc_points = [arc_p1, arc_p2]
-    for p in arc_points:
-        if min_x <= p.x <= max_x and min_y <= p.y <= max_y:
+    for a in arc_points:
+        total_orientation = 0
+        for side in rec_sides:
+            # If an endpoint of the arc lies on the rectangle's boundary, the intersection is not proper
+            if not proper_intersect and on_segment(side[0], side[1], a):
+                return True
+            else:
+                total_orientation += orientation(side[0], side[1], a)
+
+        # If total orientation equals 8, the point is left of each rectangle's side, and thus inside the rectangle
+        if total_orientation == 8:
             return True
 
     # Check if one of the sides of the rectangle intersects the arc
-    sides = [[p1, p2], [p2, p3], [p3, p4], [p4, p1]]
-    for side in sides:
-        if check_segment_arc_intersection(side[0], side[1], c, r, a1, a2):
+    for side in rec_sides:
+        if check_segment_arc_intersection(side[0], side[1], center, radius, left_angle, right_angle, proper_intersect):
             return True
 
     return False

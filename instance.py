@@ -135,7 +135,7 @@ class SimplifiedInstance(Instance):
         # TODO: Recompute shortest homotopic edges
 
         # Compute thick homotopic edges using growing algorithm
-        growing_algo = GrowingAlgorithm(self)
+        growing_algo = GrowingAlgorithm(self, 0.1)
         growing_algo.compute_thick_edges()
 
 

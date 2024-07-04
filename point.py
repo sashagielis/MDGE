@@ -20,6 +20,9 @@ class Point:
     def __mul__(self, value):
         return Point(self.x * value, self.y * value)
 
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
     def __truediv__(self, value):
         return Point(self.x / value, self.y / value)
 

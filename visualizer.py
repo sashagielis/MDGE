@@ -1,4 +1,3 @@
-import math
 import os
 
 from bokeh.embed import file_html
@@ -11,8 +10,6 @@ from pathlib import Path
 from compact_routing_structure import StraightBundle
 from delaunay_triangulation import DelaunayTriangulation
 from obstacle import PointObstacle
-from point import Point
-from utils import angle, distance
 
 # Minimum visible point diameter and edge width
 min_point_radius = 0.5
@@ -79,8 +76,8 @@ def visualize(instance, folder, filename, thick_edges=True, show_axes=False, sho
 
                     # Set angles of annular wedge
                     a1, a2 = current_bundle.get_angles(1)
-                    start_angles.append(a2)
-                    end_angles.append(a1)
+                    start_angles.append(float(a2))
+                    end_angles.append(float(a1))
 
                 # Move to the next bundle of the thick edge
                 current_b = current_bundle

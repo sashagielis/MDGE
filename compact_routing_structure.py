@@ -1,8 +1,10 @@
 import copy
 import math
+from fractions import Fraction
 
 from point import Point
-from utils import angle, distance, on_segment, orientation, vector_length
+from utils import angle, check_rectangle_arc_intersection, distance, normalize_angle, on_segment, orientation, \
+    rotation_angle
 
 
 class StraightBundle:
@@ -10,7 +12,7 @@ class StraightBundle:
     A set of straights associated with the same two points.
     """
     def __init__(self):
-        # Attributes from paper
+        # Basic attributes
         self.left = None  # The outermost adjacent elbow bundle on the left
         self.right = None  # The outermost adjacent elbow bundle on the right
         self.size = None  # The number of segments contained in the bundle
@@ -88,7 +90,7 @@ class StraightBundle:
         """
         Returns the angle of the straight bundle in radians at the given time t, which is the angle of backbone p'q'.
         Computes the angle by rotating line segment pq based on offsets d(p, p') and d(q, q') and elbow orientations.
-        The auxiliary file 'Computing angles of bundles.png' provides a more detailed explanation, including figures.
+        The auxiliary file 'Computing angles of bundles.png' provides a more detailed explanation.
 
         :param t: the time between 0 and 1
         """
@@ -99,7 +101,7 @@ class StraightBundle:
         q = eb_right.point
 
         # Compute the angle alpha of line segment pq
-        alpha = angle(p, q)
+        alpha = Fraction(angle(p, q))
 
         # If eb_left is a terminal elbow, p' = p is the left point of the straight's backbone with offset a = 0
         if eb_left.is_terminal:
@@ -120,10 +122,10 @@ class StraightBundle:
         # Compute the angle of rotation beta between line segments pq and p'q' using a and b
         # If the elbow bundles have the same orientation, they are on the same 'side' of the straight bundle
         if not (eb_left.right == self) ^ (eb_right.left == self):
-            beta = math.asin(abs(b - a) / d_pq)
+            beta = Fraction(math.asin(abs(b - a) / d_pq))
         # Otherwise, the elbow bundles are on different sides of the straight bundle
         else:
-            beta = math.asin((a + b) / d_pq)
+            beta = Fraction(math.asin((a + b) / d_pq))
 
         # Compute the angle of line segment p'q' using alpha and beta
         # Case 1: the elbow bundles have the same orientation as the straight bundle
@@ -150,6 +152,9 @@ class StraightBundle:
         # Then, the rotation is counterclockwise
         else:
             ang = alpha + beta
+
+        # Normalize the angle
+        ang = normalize_angle(ang)
 
         return ang
 
@@ -179,8 +184,7 @@ class StraightBundle:
             else:
                 eb_left_angle = sb_angle - rotation
 
-            vec = Point(math.cos(eb_left_angle), math.sin(eb_left_angle))
-            direction = vec / vector_length(vec)
+            direction = Point(math.cos(eb_left_angle), math.sin(eb_left_angle))
             magnitude = t * (eb_left.layer_thickness + self.thickness / 2)
             p1 += direction * magnitude
 
@@ -192,8 +196,7 @@ class StraightBundle:
             else:
                 eb_right_angle = sb_angle - rotation
 
-            vec = Point(math.cos(eb_right_angle), math.sin(eb_right_angle))
-            direction = vec / vector_length(vec)
+            direction = Point(math.cos(eb_right_angle), math.sin(eb_right_angle))
             magnitude = t * (eb_right.layer_thickness + self.thickness / 2)
             p2 += direction * magnitude
 
@@ -228,7 +231,16 @@ class StraightBundle:
         br_x = center.x + length / 2 * math.cos(theta) + thickness / 2 * math.sin(theta)
         br_y = center.y + length / 2 * math.sin(theta) - thickness / 2 * math.cos(theta)
 
-        return [Point(tr_x, tr_y), Point(tl_x, tl_y), Point(bl_x, bl_y), Point(br_x, br_y)]
+        return Point(tr_x, tr_y), Point(tl_x, tl_y), Point(bl_x, bl_y), Point(br_x, br_y)
+
+    def splits(self, eb, t):
+        """
+        Determines whether the straight bundle gets split by the given elbow bundle at the given time t.
+
+        :param eb: an ElbowBundle object
+        :param t: the time between 0 and 1
+        """
+        return eb.splits(self, t)
 
     def __str__(self):
         return f"{self.left} -> {self.right}"
@@ -240,7 +252,7 @@ class ElbowBundle:
     A terminal elbow forms its own bundle and is not merged with other bundles.
     """
     def __init__(self):
-        # Attributes from paper
+        # Basic attributes
         self.point = None  # The associated point
         self.left = None  # The adjacent straight bundle on the left (left = right for terminal elbows)
         self.right = None  # The adjacent straight bundle on the right (left = right for terminal elbows)
@@ -357,30 +369,75 @@ class ElbowBundle:
         :param t: the time between 0 and 1
         :returns: a1 and a2, ordered from left to right
         """
-        if self.is_terminal:
-            return None
-
         sb_left = self.left
         sb_right = self.right
 
+        # If self is a terminal elbow bundle around an obstacle, represent the point by two equal angles of 0
+        if self.is_terminal and sb_left is None:
+            return 0, 0
+
         # The angles of the annular wedge are perpendicular to the angles of the adjacent straight bundles
-        rotation = 0.5 * math.pi
+        rotation = Fraction(math.pi / 2)
 
         # Compute the left angle by rotating the angle of the left straight bundle
         sb_left_angle = sb_left.get_angle(t)
-        if sb_left.right == self:
+        if sb_left.right.point is self.point:
             a1 = sb_left_angle + rotation
         else:
             a1 = sb_left_angle - rotation
 
         # Compute the right angle by rotating the angle of the right straight bundle
         sb_right_angle = sb_right.get_angle(t)
-        if sb_right.left == self:
+        if sb_right.left.point is self.point:
             a2 = sb_right_angle + rotation
         else:
             a2 = sb_right_angle - rotation
 
+        # Normalize the angles
+        a1 = normalize_angle(a1)
+        a2 = normalize_angle(a2)
+
         return a1, a2
+
+    def splits(self, sb, t):
+        """
+        Determines whether the elbow bundle splits the given straight bundle at the given time t.
+
+        :param sb: a StraightBundle object
+        :param t: the time between 0 and 1
+        """
+        if sb.is_associated_with(self.point):
+            return False
+
+        # Check whether the rectangle of the straight bundle intersects the outer arc of the elbow bundle
+        # If a straight only touches an elbow, a split event would immediately trigger a merge event
+        # This could lead to an indefinite sequence of alternating split and merge events
+        # Therefore, we only register proper intersections as split events
+        p1, p2, p3, p4 = sb.get_corners(t)
+        center = self.point
+        thickness = self.thickness / 2 if self.is_terminal else self.thickness
+        radius = t * (self.layer_thickness + thickness)
+        left_angle, right_angle = self.get_angles(t)
+
+        return check_rectangle_arc_intersection(p1, p2, p3, p4, center, radius, left_angle, right_angle, True)
+
+    def merges(self, t):
+        """
+        Determines whether the elbow bundle merges with its adjacent straight bundles at the given time t.
+
+        :param t: the time between 0 and 1
+        """
+        if self.is_terminal:
+            return False
+
+        # A merge event should happen when the two angles of the elbow bundle are equal
+        # After the angles have become equal, the right angle starts 'moving over' the left angle
+        # Therefore, we check whether the angle of rotation from the right to the left angle is larger than π
+        # This angle should be at most π for any elbow bundle, as otherwise the adjacent straight bundles overlap
+        left_angle, right_angle = self.get_angles(t)
+        rotation = rotation_angle(right_angle, left_angle)
+
+        return rotation > math.pi
 
     def __str__(self):
         return f"{self.point}"
@@ -618,6 +675,7 @@ class CompactRoutingStructure:
         :param sb: a StraightBundle object
         :param x: an ElbowBundle object
         :param t: the time between 0 and 1
+        :returns: the new bundles sb, eb and sb2
         """
         sb2 = copy.copy(sb)
         self.straight_bundles.append(sb2)
@@ -652,7 +710,10 @@ class CompactRoutingStructure:
         # Update the elbow bundles on the right to point to sb2
         eb_right = sb2.next(eb)
         while eb_right is not None and eb_right.is_connected_to(sb):
-            if eb_right.left == sb:
+            if eb_right.is_terminal:
+                eb_right.left = sb2
+                eb_right.right = sb2
+            elif eb_right.left == sb:
                 eb_right.left = sb2
             else:
                 eb_right.right = sb2
@@ -670,6 +731,8 @@ class CompactRoutingStructure:
             if sb2.is_associated_with(eb_right_of_x.point):
                 self.union(sb2, x.right)
 
+        return sb, eb, sb2
+
     def merge(self, sb1, eb, sb2):
         """
         Merges straight-elbow-straight bundle sequence sb1, eb, sb2 into a single straight bundle.
@@ -679,6 +742,7 @@ class CompactRoutingStructure:
         :param sb1: a StraightBundle object
         :param eb: an ElbowBundle object
         :param sb2: a StraightBundle object
+        :returns: the new bundle sb1
         """
         if not sb1.is_connected_to(eb):
             raise Exception(f"Straight bundle {sb1} is not connected to elbow bundle {eb}")
@@ -705,7 +769,10 @@ class CompactRoutingStructure:
 
         # Update the elbow bundles on the right to point to sb1
         while eb_right is not None and eb_right.is_connected_to(sb2):
-            if eb_right.left == sb2:
+            if eb_right.is_terminal:
+                eb_right.left = sb1
+                eb_right.right = sb1
+            elif eb_right.left == sb2:
                 eb_right.left = sb1
             else:
                 eb_right.right = sb1
@@ -715,6 +782,8 @@ class CompactRoutingStructure:
         # Delete eb and sb2
         self.elbow_bundles.remove(eb)
         self.straight_bundles.remove(sb2)
+
+        return sb1
 
     def union(self, x, y):
         """
@@ -746,7 +815,7 @@ class CompactRoutingStructure:
 
             # Update the left elbow bundles referencing y to reference x
             eb_left = y.left
-            while eb_left.is_connected_to(y) and not eb_left.is_terminal:
+            while eb_left is not None and eb_left.is_connected_to(y):
                 if eb_left.right == y:
                     eb_left.right = x
                 else:
@@ -756,7 +825,7 @@ class CompactRoutingStructure:
 
             # Update the right elbow bundles referencing y to reference x
             eb_right = y.right
-            while eb_right.is_connected_to(y) and not eb_right.is_terminal:
+            while eb_right is not None and eb_right.is_connected_to(y):
                 if eb_right.left == y:
                     eb_right.left = x
                 else:
@@ -780,8 +849,8 @@ class CompactRoutingStructure:
             eb_right = x.right
             eb_right_inner = eb_right.inner
             if not eb_right.is_terminal:
-                while eb_right.is_connected_to(x) and eb_right_inner.is_connected_to(
-                        x) and not eb_right_inner.is_terminal:
+                while (eb_right.is_connected_to(x) and eb_right_inner.is_connected_to(x)
+                       and not eb_right_inner.is_terminal):
                     if eb_right.next(x) == eb_right_inner.next(x):
                         self.union(eb_right, eb_right_inner)
                     else:
@@ -817,7 +886,7 @@ class CompactRoutingStructure:
     def divide(self, sb, eb):
         """
         Splits straight bundle sb at the adjacent elbow bundle eb into two interior-disjoint straight bundles.
-        The new straight bundles have the same associated vertices and (temporarily) share a straight segment.
+        The new straight bundles have the same associated point and (temporarily) share a straight segment.
         This is used before removing the degenerate bundle eb when merging sb with eb and another straight bundle.
         The two divided straight bundles will no longer be adjacent to the same points after completing the merge.
 
@@ -1100,6 +1169,12 @@ class CompactRoutingStructure:
                 eb_inner = eb_inner.inner
 
             eb.layer_thickness = layer_thickness
+
+    def __contains__(self, bundle):
+        if type(bundle) == StraightBundle:
+            return bundle in self.straight_bundles
+        else:
+            return bundle in self.elbow_bundles
 
     def __str__(self):
         result = "Straight bundles:\n"
