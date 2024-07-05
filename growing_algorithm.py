@@ -145,12 +145,13 @@ class GrowingAlgorithm:
             event = self.queue.get()
 
             # Handle invalid events
-            if not event.is_valid():
-                print("Invalid: ", event)
+            if any(b not in self.crs for b in event.bundles) or not event.is_valid():
+                # Compute the next events for the bundles that still exist in the crs
                 for b in event.bundles:
                     if b in self.crs:
                         self.update_queue(b, event.t)
 
+                # Continue with the next event
                 continue
 
             print(event)
