@@ -3,14 +3,13 @@ from obstacle_displacer import Displacer, Objective
 from visualizer import visualize
 
 # IPE instances
-ipe_instances = {
-    'simplified': [
+ipe_instances = [
         # 'One line small',
         # 'One line large',
         # 'Curve edge case',
         # 'Two lines edge case',
         # 'simplified_instance_from_report',
-        # 'Test shortest homotopic edges',
+        'Test shortest homotopic edges',
         # 'Test straight line homotopy',
         'Simplified single paths',
         'Collinear straights',
@@ -19,17 +18,15 @@ ipe_instances = {
         'Collinear straights 4',
         'Many collisions',
         'Test'
-    ],
-    'general': [
-        # 'instance_from_report',
     ]
-}
 
 
 def main():
     ipe_plot_folder = "plots/simplified/ipe"
 
-    for instance_name in ipe_instances['simplified']:
+    for instance_name in ipe_instances:
+        print(f"Instance: {instance_name}")
+
         file = f"instances/simplified/ipe/{instance_name}.ipe"
         instance = SimplifiedInstance(instance_name, file=file)
         # print(instance)

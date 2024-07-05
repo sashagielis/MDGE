@@ -209,18 +209,15 @@ def check_segment_arc_intersection(p, q, center, radius, left_angle, right_angle
     right_angle = normalize_angle(right_angle)
 
     # Segment pq only intersects the circle if the time of intersection is between 0 and 1
-    if 0 <= t1 <= 1:
-        intersection = p + t1 * (q - p)
+    intersections = []
+    for t in [t1, t2]:
+        if 0 <= t <= 1:
+            intersections.append(p + t * (q - p))
 
-        # Check if the intersection lies between the two angles of the arc
-        if left_angle >= angle(center, intersection) >= right_angle:
-            return True
-
-    if 0 <= t2 <= 1:
-        intersection = p + t2 * (q - p)
-
-        # Check if the intersection lies between the two angles of the arc
-        if left_angle >= angle(center, intersection) >= right_angle:
+    # Check if one of the intersections lies between the two angles of the arc
+    for intersection in intersections:
+        ang = angle(center, intersection)
+        if rotation_angle(ang, left_angle) <= rotation_angle(right_angle, left_angle):
             return True
 
     return False

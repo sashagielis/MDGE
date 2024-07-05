@@ -14,6 +14,7 @@ from obstacle import PointObstacle
 # Minimum visible point diameter and edge width
 min_point_radius = 0.5
 min_edge_width = 1
+t = 1
 
 
 def visualize(instance, folder, filename, thick_edges=True, show_axes=False, show_delaunay=False):
@@ -52,7 +53,7 @@ def visualize(instance, folder, filename, thick_edges=True, show_axes=False, sho
             while not done:
                 if type(current_bundle) == StraightBundle:
                     # Set segment corners of straight
-                    segment_corners = current_bundle.get_corners(1)
+                    segment_corners = current_bundle.get_corners(t)
                     straight_xs.append([[[corner.x for corner in segment_corners]]])
                     straight_ys.append([[[corner.y for corner in segment_corners]]])
 
@@ -71,11 +72,11 @@ def visualize(instance, folder, filename, thick_edges=True, show_axes=False, sho
                     elbow_ys.append(float(current_bundle.point.y))
 
                     # Set radii of annular wedge
-                    inner_radii.append(current_bundle.layer_thickness)
-                    outer_radii.append(current_bundle.layer_thickness + current_bundle.thickness)
+                    inner_radii.append(t * current_bundle.layer_thickness)
+                    outer_radii.append(t * (current_bundle.layer_thickness + current_bundle.thickness))
 
                     # Set angles of annular wedge
-                    a1, a2 = current_bundle.get_angles(1)
+                    a1, a2 = current_bundle.get_angles(t)
                     start_angles.append(float(a2))
                     end_angles.append(float(a1))
 
@@ -126,7 +127,7 @@ def visualize(instance, folder, filename, thick_edges=True, show_axes=False, sho
 
     # Draw vertices
     for vertex in instance.graph.vertices:
-        radius = vertex.radius if thick_edges else min_point_radius
+        radius = t * vertex.radius if thick_edges else min_point_radius
         plot.circle(float(vertex.x), float(vertex.y), radius=radius, color=vertex.color)
 
     if show_delaunay:

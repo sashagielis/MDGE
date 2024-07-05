@@ -3,8 +3,7 @@ import math
 from fractions import Fraction
 
 from point import Point
-from utils import angle, check_rectangle_arc_intersection, distance, normalize_angle, on_segment, orientation, \
-    rotation_angle
+from utils import angle, check_rectangle_arc_intersection, distance, normalize_angle, on_segment, orientation
 
 
 class StraightBundle:
@@ -174,7 +173,7 @@ class StraightBundle:
         sb_angle = self.get_angle(t)
 
         # The angles of the backbone endpoints wrt their elbow bundles are perpendicular to sb_angle
-        rotation = 0.5 * math.pi
+        rotation = Fraction(math.pi / 2)
 
         # If eb_left is a terminal elbow, p1 is the left point of the backbone
         # Otherwise, eb_left bends around p1, and we translate p1 based on sb_angle and separating thickness
@@ -430,14 +429,28 @@ class ElbowBundle:
         if self.is_terminal:
             return False
 
-        # A merge event should happen when the two angles of the elbow bundle are equal
-        # After the angles have become equal, the right angle starts 'moving over' the left angle
-        # Therefore, we check whether the angle of rotation from the right to the left angle is larger than π
-        # This angle should be at most π for any elbow bundle, as otherwise the adjacent straight bundles overlap
-        left_angle, right_angle = self.get_angles(t)
-        rotation = rotation_angle(right_angle, left_angle)
+        sb_left = self.left
+        sb_right = self.right
 
-        return rotation > math.pi
+        # Check whether the elbow bundle is no longer a right bend using the backbones of the adjacent straight bundles
+        p1, p2 = sb_left.get_backbone_endpoints(t)
+        p3, p4 = sb_right.get_backbone_endpoints(t)
+
+        # Set a and b equal to the endpoints of the backbone of sb_left such that a -> b is directed towards the elbow
+        if sb_left.right.point == self.point:
+            a = p1
+            b = p2
+        else:
+            a = p2
+            b = p1
+
+        # Set c equal to the endpoint of the backbone of sb_right that is furthest from the elbow
+        if sb_right.left.point == self.point:
+            c = p4
+        else:
+            c = p3
+
+        return orientation(a, b, c) != 1
 
     def __str__(self):
         return f"{self.point}"

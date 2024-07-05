@@ -11,7 +11,7 @@ class Event:
         self.bundles = bundles
 
     def __lt__(self, other):
-        return self.t < other.t or (self.t == other.t and type(self) == SplitEvent)
+        return self.t < other.t or (self.t == other.t and type(self) == MergeEvent)
 
 
 class SplitEvent(Event):
