@@ -1,5 +1,6 @@
 import copy
 import math
+
 from fractions import Fraction
 
 from point import Point
@@ -478,7 +479,7 @@ class CompactRoutingStructure:
         # Construct singular straight and elbow bundles for edges
         for edge in self.instance.graph.edges:
             # Get reduced crossing sequence of the edge to determine the orientations of the bends
-            crossing_sequence = edge.crossing_sequence
+            crossing_sequence = edge.crossing_sequence.sequence
             crossing_index = 0
 
             bend_orientations = []

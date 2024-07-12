@@ -2,14 +2,11 @@ import math
 import os
 
 from delaunay_displacer import DelaunayDisplacer
-from diamond_displacer import DiamondDisplacer
 from growing_algorithm import GrowingAlgorithm
 from homotopy import Homotopy
 from input_parser import read_ipe_instance
 from obstacle import PointObstacle
 from obstacle_displacer import Displacer
-from optimal_displacer import OptimalDisplacer
-from scipy_displacer import ScipyDisplacer
 
 
 class Instance:
@@ -117,14 +114,8 @@ class SimplifiedInstance(Instance):
         self.homotopy.compute_shortest_edges()
 
         # Choose ObstacleDisplacer
-        if displacement_method == Displacer.SCIPY:
-            displacer = ScipyDisplacer(self, objective)
-        elif displacement_method == Displacer.OPTIMAL:
-            displacer = OptimalDisplacer(self, objective)
-        elif displacement_method == Displacer.DIAMOND:
-            displacer = DiamondDisplacer(self, objective)
-        elif displacement_method == Displacer.DELAUNAY:
-            displacer = DelaunayDisplacer(self, objective, 1)
+        if displacement_method == Displacer.DELAUNAY:
+            displacer = DelaunayDisplacer(self, objective)
         else:
             raise Exception(f"Displacement method {displacement_method.name} not implemented")
 
@@ -148,5 +139,4 @@ class GeneralInstance(Instance):
         super().__init__(instance_name, **kwargs)
 
     def solve(self):
-        # TODO
         return

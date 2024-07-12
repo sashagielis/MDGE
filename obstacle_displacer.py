@@ -1,8 +1,6 @@
 from enum import Enum
-from itertools import pairwise
 
-from constraint import ObstaclePairConstraint, ObstacleVertexConstraint
-from utils import check_segment_segment_intersection, distance, on_segment
+from utils import distance
 
 
 class Objective(Enum):
@@ -17,13 +15,13 @@ class Displacer(Enum):
     """
     The displacer used for displacing the obstacles.
     """
-    SCIPY = 1  # The ScipyDisplacer
-    OPTIMAL = 2  # The OptimalDisplacer
-    DIAMOND = 3  # The DiamondDisplacer
-    DELAUNAY = 4  # The DelaunayDisplacer
+    DELAUNAY = 1  # The DelaunayDisplacer
 
 
 class ObstacleDisplacer:
+    """
+    A displacement method to solve a set of minimum-separation constraints on the obstacles.
+    """
     def __init__(self, instance, objective):
         """
         :param instance: a SimplifiedInstance object
@@ -33,53 +31,12 @@ class ObstacleDisplacer:
         self.objective = objective
         self.constraints = []
 
-    def compute_constraints_naive(self):
+    def compute_constraints(self):
         """
-        Computes the minimum separation constraints on all obstacle and obstacle-vertex pairs.
+        Computes the minimum separation constraints that the solution should satisfy.
+        Displacers should implement this method.
         """
-        self.constraints = []
-        for i in range(len(self.instance.obstacles)):
-            # Create obstacle pair constraints
-            for j in range(i + 1, len(self.instance.obstacles)):
-                o1 = self.instance.obstacles[i]
-                o2 = self.instance.obstacles[j]
-
-                # Compute the total thickness of the edges passing in between o1 and o2
-                # To do this, for each edge link pq, check if it intersects line segment o1o2
-                # Assumes that o1, o2 and line segment pq are disjoint
-                total_thickness = 0
-                for edge in self.instance.graph.edges:
-                    for (p, q) in pairwise(edge.path):
-                        if check_segment_segment_intersection(o1, o2, p, q):
-                            # Prevent double counting of intersections in a bend
-                            if p == edge.v1 or not on_segment(o1, o2, p):
-                                total_thickness += edge.thickness
-
-                # Create constraint
-                constraint = ObstaclePairConstraint(o1, o2, total_thickness)
-                self.constraints.append(constraint)
-
-            # Create obstacle-vertex constraints
-            for v in self.instance.graph.vertices:
-                o = self.instance.obstacles[i]
-
-                # Compute the total thickness of the edges passing in between o and v
-                # To do this, for each edge link pq, check if it intersects line segment ov and if so, not in a vertex
-                # Assumes that o and line segment pq are disjoint
-                total_thickness = 0
-                for edge in self.instance.graph.edges:
-                    for (p, q) in list(pairwise(edge.path)):
-                        if check_segment_segment_intersection(o, v, p, q):
-                            # Do not consider link incident on v and prevent double counting of intersections in a bend
-                            if not (v == p or v == q) and not on_segment(o, v, p):
-                                total_thickness += edge.thickness
-
-                # Add extra space to draw vertex
-                # min_separation = total_thickness + v.diameter / 2
-
-                # Create constraint
-                constraint = ObstacleVertexConstraint(o, v, total_thickness)
-                self.constraints.append(constraint)
+        raise Exception(f"Method compute_constraints not implemented for {type(self).__name__}")
 
     def displace_obstacles(self):
         """
@@ -113,18 +70,29 @@ class ObstacleDisplacer:
         """
         Executes the displacement method.
         """
-        # Compute minimum separation constraints
-        # self.compute_constraints_naive()
+        # Compute minimum-separation constraints
+        self.compute_constraints()
 
-        # Displace the obstacles
-        self.displace_obstacles()
+        while not self.is_valid_solution():
+            # Displace the obstacles
+            self.displace_obstacles()
 
-        # print("Constraints:")
-        # for con in self.constraints:
-        #     print(con)
+            # Update the bounding box points of the DT, which may no longer be valid after displacing the obstacles
+            self.instance.homotopy.update_bbox_points()
 
-        if self.is_valid_solution():
-            # Return displacement cost
-            return self.compute_cost()
-        else:
-            raise Exception("There are remaining conflicts!")
+            # While there are non-Delaunay triangles in the DT, flip the problematic half-edges
+            while not self.instance.homotopy.dt.is_valid():
+                for t in self.instance.homotopy.dt.triangles:
+                    delaunay, he = t.is_delaunay()
+                    if not delaunay:
+                        he.flip()
+
+                        # Update the crossing sequences
+                        for edge in self.instance.graph.edges:
+                            edge.crossing_sequence.update(he)
+
+            # Recompute constraints
+            self.compute_constraints()
+
+        # Return displacement cost
+        return self.compute_cost()
