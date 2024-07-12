@@ -9,15 +9,15 @@ ipe_instances = [
         # 'Curve edge case',
         # 'Two lines edge case',
         # 'simplified_instance_from_report',
-        'Test shortest homotopic edges',
+        # 'Test shortest homotopic edges',
         # 'Test straight line homotopy',
         'Simplified single paths',
-        'Collinear straights',
-        'Collinear straights 2',
-        'Collinear straights 3',
-        'Collinear straights 4',
-        'Many collisions',
-        'Test'
+        # 'Collinear straights',
+        # 'Collinear straights 2',
+        # 'Collinear straights 3',
+        # 'Collinear straights 4',
+        # 'Many collisions',
+        # 'Test'
     ]
 
 
@@ -34,7 +34,7 @@ def main():
         instance_folder = f"{ipe_plot_folder}/{instance_name}"
 
         # Visualize input
-        visualize(instance, instance_folder, instance_name, False, True, False)
+        visualize(instance, instance_folder, instance_name, False, True, True)
 
         # Set edge thicknesses
         for edge in instance.graph.edges:
@@ -44,14 +44,14 @@ def main():
             edge.v2.radius = edge.thickness / 2
 
         objective = Objective.MAX
-        displacement_method = Displacer.DIAMOND
+        displacement_method = Displacer.DELAUNAY
         instance.solve(objective, displacement_method)
         # print(instance)
 
         # Visualize solution
         solution_folder = f"{instance_folder}/solutions"
         solution_filename = f"{instance_name} - {objective.name} - {displacement_method.name}"
-        visualize(instance, solution_folder, solution_filename, True, True)
+        visualize(instance, solution_folder, solution_filename, True, True, False)
 
 
 if __name__ == "__main__":

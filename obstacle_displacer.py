@@ -114,14 +114,14 @@ class ObstacleDisplacer:
         Executes the displacement method.
         """
         # Compute minimum separation constraints
-        self.compute_constraints_naive()
-
-        print("Constraints:")
-        for con in self.constraints:
-            print(con)
+        # self.compute_constraints_naive()
 
         # Displace the obstacles
         self.displace_obstacles()
+
+        # print("Constraints:")
+        # for con in self.constraints:
+        #     print(con)
 
         if self.is_valid_solution():
             # Return displacement cost

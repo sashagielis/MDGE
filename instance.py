@@ -104,6 +104,7 @@ class SimplifiedInstance(Instance):
     """
     def __init__(self, instance_name, **kwargs):
         super().__init__(instance_name, **kwargs)
+        self.homotopy = Homotopy(self)
 
     def solve(self, objective, displacement_method):
         """
@@ -113,8 +114,7 @@ class SimplifiedInstance(Instance):
         :param objective: an Objective object specifying the objective function to be minimized
         """
         # Compute shortest homotopic edges
-        homotopy = Homotopy(self)
-        homotopy.compute_shortest_edges()
+        self.homotopy.compute_shortest_edges()
 
         # Choose ObstacleDisplacer
         if displacement_method == Displacer.SCIPY:
@@ -124,15 +124,16 @@ class SimplifiedInstance(Instance):
         elif displacement_method == Displacer.DIAMOND:
             displacer = DiamondDisplacer(self, objective)
         elif displacement_method == Displacer.DELAUNAY:
-            displacer = DelaunayDisplacer(self, objective)
+            displacer = DelaunayDisplacer(self, objective, 1)
         else:
             raise Exception(f"Displacement method {displacement_method.name} not implemented")
 
-        # Displace the obstacles
-        # displacement_cost = displacer.execute()
-        # print(f"Displacement cost = {displacement_cost}")
+        # Displace obstacles
+        displacement_cost = displacer.execute()
+        print(f"Displacement cost = {displacement_cost}")
 
-        # TODO: Recompute shortest homotopic edges
+        # Recompute shortest homotopic edges using updated crossing sequences
+        self.homotopy.compute_shortest_edges(use_existing_crossing_sequences=True)
 
         # Compute thick homotopic edges using growing algorithm
         growing_algo = GrowingAlgorithm(self, 0.1)

@@ -324,6 +324,9 @@ def compute_funnel(sequence, edge):
         del funnel.fan[-1]
         funnel.fan.append(edge.v2)
 
+    # Remove the added crossing incident on v2 from the sequence
+    del sequence[-1]
+
     return funnel
 
 
@@ -371,7 +374,9 @@ class Homotopy:
         self.instance = instance
 
         # Compute Delaunay triangulation on the vertices and obstacles
-        self.dt = self.compute_delaunay_triangulation()
+        self.dt = None
+        self.bbox_points = None
+        self.compute_delaunay_triangulation()
 
     def compute_delaunay_triangulation(self):
         """
@@ -381,35 +386,49 @@ class Homotopy:
         :returns: a DelaunayTriangulation object
         """
         # Construct extra Delaunay points corresponding to a bounding box of the instance
-        # This makes it easier to compute the shortest homotopic edges using the funnel algorithm
         tl_bbox_point = Point(self.instance.min_x - 1, self.instance.max_y + 1)
         tr_bbox_point = Point(self.instance.max_x + 1, self.instance.max_y + 1)
         br_bbox_point = Point(self.instance.max_x + 1, self.instance.min_y - 1)
         bl_bbox_point = Point(self.instance.min_x - 1, self.instance.min_y - 1)
-        extra_dt_points = [tl_bbox_point, tr_bbox_point, br_bbox_point, bl_bbox_point]
+        self.bbox_points = [tl_bbox_point, tr_bbox_point, br_bbox_point, bl_bbox_point]
 
-        dt_points = self.instance.graph.vertices + self.instance.obstacles + extra_dt_points
+        dt_points = self.instance.graph.vertices + self.instance.obstacles + self.bbox_points
 
         # Compute Delaunay triangulation
-        dt = DelaunayTriangulation(dt_points)
+        self.dt = DelaunayTriangulation(dt_points)
 
-        return dt
+    def update_bbox_points(self):
+        """
+        Updates the bounding box points of the Delaunay triangulation using the instance's dimensions.
+        """
+        self.bbox_points[0].x = self.instance.min_x - 1
+        self.bbox_points[0].y = self.instance.max_y + 1
+        self.bbox_points[1].x = self.instance.max_x + 1
+        self.bbox_points[1].y = self.instance.max_y + 1
+        self.bbox_points[2].x = self.instance.max_x + 1
+        self.bbox_points[2].y = self.instance.min_y - 1
+        self.bbox_points[3].x = self.instance.min_x - 1
+        self.bbox_points[3].y = self.instance.min_y - 1
 
-    def compute_shortest_edges(self):
+    def compute_shortest_edges(self, use_existing_crossing_sequences=False):
         """
         Computes the shortest homotopic edges.
         Follows algorithm by Hershberger and Snoeyink (https://doi.org/10.1016/0925-7721(94)90010-8).
         More detailed explanation: https://jeffe.cs.illinois.edu/teaching/compgeom/notes/05-shortest-homotopic.pdf.
         """
         for edge in self.instance.graph.edges:
-            # Compute the crossing sequence of the edge
-            sequence = compute_crossing_sequence(edge)
+            if use_existing_crossing_sequences:
+                # Retrieve the crossing sequence of the edge
+                reduced_sequence = edge.crossing_sequence
+            else:
+                # Compute the crossing sequence of the edge
+                sequence = compute_crossing_sequence(edge)
 
-            # Reduce the crossing sequence
-            reduced_sequence = reduce_crossing_sequence(sequence, edge)
+                # Reduce the crossing sequence
+                reduced_sequence = reduce_crossing_sequence(sequence, edge)
 
-            # Assign the reduced crossing sequence to the edge
-            edge.crossing_sequence = reduced_sequence
+                # Assign the reduced crossing sequence to the edge
+                edge.crossing_sequence = reduced_sequence
 
             # Compute the funnel of the reduced crossing sequence
             funnel = compute_funnel(reduced_sequence, edge)

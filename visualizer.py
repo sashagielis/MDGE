@@ -2,6 +2,7 @@ import os
 
 from bokeh.embed import file_html
 from bokeh.layouts import gridplot
+from bokeh.models import Range1d
 from bokeh.plotting import figure
 from bokeh.resources import CDN
 from html2image import Html2Image
@@ -10,6 +11,8 @@ from pathlib import Path
 from compact_routing_structure import StraightBundle
 from delaunay_triangulation import DelaunayTriangulation
 from obstacle import PointObstacle
+from point import Point
+from utils import get_circle
 
 # Minimum visible point diameter and edge width
 min_point_radius = 0.5
@@ -131,13 +134,10 @@ def visualize(instance, folder, filename, thick_edges=True, show_axes=False, sho
         plot.circle(float(vertex.x), float(vertex.y), radius=radius, color=vertex.color)
 
     if show_delaunay:
-        points = instance.graph.vertices + instance.obstacles
-        dt = DelaunayTriangulation(points)
-
         # Draw Delaunay triangulation
         xs = []
         ys = []
-        for triangle in dt.triangles:
+        for triangle in instance.homotopy.dt.triangles:
             xs.append([[[float(he.origin.x) for he in triangle.half_edges]]])
             ys.append([[[float(he.origin.y) for he in triangle.half_edges]]])
         plot.multi_polygons(xs, ys, line_color='black', fill_alpha=0)

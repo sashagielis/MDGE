@@ -68,7 +68,7 @@ def vector_length(p):
     """
     Determines the length of vector p.
     """
-    return math.sqrt(p.x ** 2 + p.y ** 2)
+    return Fraction(math.sqrt(p.x ** 2 + p.y ** 2))
 
 
 def dot(p, q):
@@ -128,6 +128,45 @@ def on_half_line(p, q, r):
     Determines whether point r lies on the half-line with origin p and another point q.
     """
     return orientation(p, q, r) == 0 and (on_segment(p, q, r) or on_segment(p, r, q))
+
+
+def get_circle(p, q, r):
+    """
+    Determines the center and radius of the circle through the points p, q and r.
+    """
+    # Determine midpoints of segments pq and pr
+    mid1 = (p + q) / 2
+    mid2 = (p + r) / 2
+
+    # Determine directions of vectors perpendicular to pq and pr
+    vec1 = q - p
+    vec2 = r - p
+    dir1 = vec1 / vector_length(vec1)
+    dir2 = vec2 / vector_length(vec2)
+
+    # Determine perpendicular vectors
+    perp1 = Point(-dir1.y, dir1.x)
+    perp2 = Point(-dir2.y, dir2.x)
+
+    # Compute other points on perpendicular bisectors
+    point1 = perp1 + mid1
+    point2 = perp2 + mid2
+
+    # Compute intersection of perpendicular bisectors of pq and pr
+    intersection = line_line_intersection(mid1, point1, mid2, point2)
+
+    # Determine center, which is equal to the intersection point, and compute radius from the equation of the circle
+    center = Point(intersection.x, intersection.y)
+    radius = math.sqrt((p.x - center.x) ** 2 + (p.y - center.y) ** 2)
+
+    return center, radius
+
+
+def in_circle(p, c, r):
+    """
+    Determines whether the point p lies within the circle with center c and radius r.
+    """
+    return distance(p, c) < r
 
 
 def check_segment_segment_intersection(p1, q1, p2, q2):
@@ -259,3 +298,29 @@ def check_rectangle_arc_intersection(p1, p2, p3, p4, center, radius, left_angle,
             return True
 
     return False
+
+
+def line_line_intersection(p1, q1, p2, q2):
+    """
+    Returns the intersection of the lines through p1 and q1 and through p2 and q2, or None if they do not intersect.
+    Source: https://stackoverflow.com/questions/20677795/how-do-i-compute-the-intersection-point-of-two-lines.
+    """
+    diff1 = p1 - q1
+    diff2 = p2 - q2
+
+    def det(a, b):
+        return a.x * b.y - a.y * b.x
+
+    div = det(diff1, diff2)
+
+    if div == 0:
+        return None
+
+    d = Point(det(p1, q1), det(p2, q2))
+
+    xdiff = Point(diff1.x, diff2.x)
+    ydiff = Point(diff1.y, diff2.y)
+    x = det(d, xdiff) / div
+    y = det(d, ydiff) / div
+
+    return Point(x, y)

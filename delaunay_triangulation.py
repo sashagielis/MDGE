@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.spatial import Delaunay
 
-from utils import check_segment_segment_intersection, orientation
+from utils import check_segment_segment_intersection, orientation, get_circle, in_circle, on_segment
 
 
 class HalfEdge:
@@ -19,6 +19,8 @@ class HalfEdge:
         self.next = None  # The next half-edge along the same triangle
         self.prev = None  # The previous half-edge along the same triangle
         self.triangle = None  # The triangle containing the half-edge
+
+        self.constraint = None  # The minimum-separation constraint on the two points
 
     def orientation(self, p):
         """
@@ -38,6 +40,64 @@ class HalfEdge:
         """
         return check_segment_segment_intersection(self.origin, self.target, p, q)
 
+    def flip(self):
+        """
+        Flips the half-edge and its twin.
+        """
+        t1 = self.triangle
+        t2 = self.twin.triangle
+
+        # Get the two opposing points of the triangles
+        point_t1 = self.next.target
+        point_t2 = self.twin.next.target
+
+        # Update outgoing half-edges
+        self.origin.outgoing_dt_edges.remove(self)
+        self.twin.origin.outgoing_dt_edges.remove(self.twin)
+        point_t1.outgoing_dt_edges.append(self.twin)
+        point_t2.outgoing_dt_edges.append(self)
+
+        # Set new origin and target
+        self.origin = point_t2
+        self.target = point_t1
+        self.twin.origin = point_t1
+        self.twin.target = point_t2
+
+        # Set new next and prev
+        he_next = self.next
+        self.next = self.prev
+        self.prev = self.twin.next
+        self.twin.next = self.twin.prev
+        self.twin.prev = he_next
+
+        # Set new next and prev for other half-edges of t1
+        self.next.next = self.prev
+        self.next.prev = self
+        self.prev.next = self
+        self.prev.prev = self.next
+
+        # Set new next and prev for other half-edges of t2
+        self.twin.next.next = self.twin.prev
+        self.twin.next.prev = self.twin
+        self.twin.prev.next = self.twin
+        self.twin.prev.prev = self.twin.next
+
+        # Set new triangle for other half-edges
+        self.next.triangle = t1
+        self.prev.triangle = t1
+        self.twin.next.triangle = t2
+        self.twin.prev.triangle = t2
+
+        # Set new half-edges of t1 and t2
+        t1.half_edges = [self, self.next, self.prev]
+        t2.half_edges = [self.twin, self.twin.next, self.twin.prev]
+
+    def __eq__(self, other):
+        if self is None or other is None:
+            return False
+
+        return self.origin == other.origin and self.target == other.target
+
     def __str__(self):
         return f"{self.origin} -> {self.target}"
 
@@ -48,6 +108,22 @@ class Triangle:
     """
     def __init__(self):
         self.half_edges = []  # Set of half-edges forming the triangle
+
+    def get_points(self):
+        """
+        Returns the three points of the triangle.
+
+        :returns: three Point objects
+        """
+        if len(self.half_edges) != 3:
+            raise Exception(f"Triangle {self} contains {len(self.half_edges)} half-edges instead of 3")
+
+        he = self.half_edges[0]
+        p = he.origin
+        q = he.target
+        r = he.next.target
+
+        return p, q, r
 
     def get_edge(self, origin, target):
         """
@@ -80,10 +156,38 @@ class Triangle:
 
         return None
 
-    def __str__(self):
-        he = self.half_edges[0]
+    def is_delaunay(self):
+        """
+        Determines whether the triangle satisfies the Delaunay condition.
 
-        return f"{he.origin} -> {he.target} -> {he.next.target}"
+        :returns: a tuple consisting of a boolean value and the separating half_edge that should be flipped
+        """
+        p, q, r = self.get_points()
+
+        # If the points are collinear, the triangle is not Delaunay
+        if orientation(p, q, r) == 0:
+            # The half-edge between the two most distant points should be flipped
+            for he in self.half_edges:
+                other_point = he.next.target
+                if on_segment(he.origin, he.target, other_point):
+                    return False, he
+
+        # Get the center and radius of the circumcircle
+        center, radius = get_circle(p, q, r)
+
+        # Check for each neighboring triangle if the point not part of the separating edge is inside the circumcircle
+        for he in self.half_edges:
+            if he.twin is not None:
+                opposing_point = he.twin.next.target
+                if in_circle(opposing_point, center, radius):
+                    return False, he
+
+        return True, None
+
+    def __str__(self):
+        p, q, r = self.get_points()
+
+        return f"{p} -> {q} -> {r}"
 
 
 class DelaunayTriangulation:
@@ -95,7 +199,6 @@ class DelaunayTriangulation:
         :param points: a list of Point objects
         """
         self.vertices = []
-
         dt_input_points = []
 
         # Initialize Delaunay points
@@ -104,6 +207,7 @@ class DelaunayTriangulation:
             dt_input_points.append([float(point.x), float(point.y)])
             self.vertices.append(point)
 
+        self.half_edges = []
         self.triangles = []
 
         # Compute Delaunay triangulation
@@ -120,6 +224,7 @@ class DelaunayTriangulation:
 
                 # Construct half-edge
                 he = HalfEdge(p1, p2)
+                self.half_edges.append(he)
                 he.triangle = triangle
                 p1.outgoing_dt_edges.append(he)
 
@@ -142,6 +247,12 @@ class DelaunayTriangulation:
                 triangle.half_edges[j].prev = triangle.half_edges[(j - 1) % 3]
 
             self.triangles.append(triangle)
+
+    def is_valid(self):
+        """
+        Determines whether all triangles satisfy the Delaunay condition.
+        """
+        return all(t.is_delaunay()[0] for t in self.triangles)
 
     def __str__(self):
         result = "Triangles:\n"
