@@ -53,7 +53,7 @@ class HalfEdge:
 
         # Update outgoing half-edges
         self.origin.outgoing_dt_edges.remove(self)
-        self.twin.origin.outgoing_dt_edges.remove(self.twin)
+        self.target.outgoing_dt_edges.remove(self.twin)
         point_t1.outgoing_dt_edges.append(self.twin)
         point_t2.outgoing_dt_edges.append(self)
 

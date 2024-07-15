@@ -2,17 +2,13 @@ import os
 
 from bokeh.embed import file_html
 from bokeh.layouts import gridplot
-from bokeh.models import Range1d
 from bokeh.plotting import figure
 from bokeh.resources import CDN
 from html2image import Html2Image
 from pathlib import Path
 
 from compact_routing_structure import StraightBundle
-from delaunay_triangulation import DelaunayTriangulation
 from obstacle import PointObstacle
-from point import Point
-from utils import get_circle
 
 # Minimum visible point diameter and edge width
 min_point_radius = 0.5

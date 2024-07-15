@@ -76,8 +76,7 @@ class CrossingSequence:
         i = 0
         while i < len(self.sequence) - 1:
             if self.sequence[i] == self.sequence[i + 1].twin:
-                del self.sequence[i]
-                del self.sequence[i + 1]
+                del self.sequence[i:i+2]
 
                 i = max(0, i - 1)
             else:
@@ -172,12 +171,14 @@ class CrossingSequence:
                 i += 1
 
     def __str__(self):
+        i = 1
         result = ""
         for he in self.sequence:
-            result += f"{he.origin} -> "
+            result += f"{i}. {he}\n"
+            i += 1
 
         if len(self.sequence) > 0:
-            result += f"{self.sequence[-1].target}"
+            result = result[:-1]
 
         return result
 

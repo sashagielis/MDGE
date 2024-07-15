@@ -17,7 +17,9 @@ ipe_instances = [
         # 'Collinear straights 3',
         # 'Collinear straights 4',
         # 'Many collisions',
-        # 'Test'
+        # 'Test',
+        # 'Test DT flips',
+        # 'Larger instance'
     ]
 
 
