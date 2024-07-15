@@ -103,6 +103,7 @@ class CrossingSequence:
             Updates the crossing sequence of the edge accordingly.
             """
             # Check if he or its twin is the separating half-edge of the quadrilateral entered via the current crossing
+            # The separating half-edge is the half-edge that the edge may cross, taking into account the half-edge side
             separating_half_edge = None
             if crossing == he.next.twin or crossing == he.prev.twin:
                 separating_half_edge = he
@@ -116,10 +117,15 @@ class CrossingSequence:
 
                 # If the edge crossed the separating half-edge, check if it still does after the flip
                 if crossing2 == he or crossing2 == he.twin:
+                    # First delete the crossed half-edge and then replace it by the separating half-edge if necessary
+                    # We do this because the separating half-edge may be the twin of crossing2
+                    del self.sequence[i + 1]
+
                     # If crossing2 is the last crossing, remove it as it has become connected to v2 after the flip
                     # If the third crossing is in the same triangle as the separating half-edge, also remove it
-                    if crossing3 is None or crossing3.triangle == separating_half_edge.triangle:
-                        del self.sequence[i + 1]
+                    # Otherwise, (re)insert the separating half-edge
+                    if crossing3 is not None and crossing3.triangle != separating_half_edge.triangle:
+                        self.sequence.insert(i + 1, separating_half_edge)
 
                 # Otherwise, the edge crosses the separating half-edge after the flip
                 else:

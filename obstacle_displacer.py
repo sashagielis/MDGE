@@ -77,6 +77,10 @@ class ObstacleDisplacer:
             # Displace the obstacles
             self.displace_obstacles()
 
+            # Update the dimensions of the instance
+            for o in self.instance.obstacles:
+                self.instance.update_dimensions(o)
+
             # Update the bounding box points of the DT, which may no longer be valid after displacing the obstacles
             self.instance.homotopy.update_bbox_points()
 

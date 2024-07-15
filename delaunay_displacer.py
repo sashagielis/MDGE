@@ -192,8 +192,8 @@ class DelaunayDisplacer(ObstacleDisplacer):
             y_diff = model.addVar(lb=-gp.GRB.INFINITY)
             abs_x_diff = model.addVar()
             abs_y_diff = model.addVar()
-            model.addConstr(x_diff == x1 - x2)
-            model.addConstr(y_diff == y1 - y2)
+            model.addConstr(x_diff == dx)
+            model.addConstr(y_diff == dy)
             model.addConstr(abs_x_diff == gp.abs_(x_diff))
             model.addConstr(abs_y_diff == gp.abs_(y_diff))
             model.addConstr(abs_x_diff + abs_y_diff >= 1)
@@ -201,13 +201,17 @@ class DelaunayDisplacer(ObstacleDisplacer):
         # Apply optimization to compute new obstacle positions
         model.optimize()
 
-        # Assign computed positions to obstacles
-        for i in range(len(self.instance.obstacles)):
-            o = self.instance.obstacles[i]
-            o.x = Fraction(new_xs[i].X)
-            o.y = Fraction(new_ys[i].X)
+        if model.Status == gp.GRB.OPTIMAL:
+            # The model was solved optimally
+            # Assign computed positions to obstacles
+            for i in range(len(self.instance.obstacles)):
+                o = self.instance.obstacles[i]
+                o.x = Fraction(new_xs[i].X)
+                o.y = Fraction(new_ys[i].X)
 
-            # Update the dimensions of the instance
-            self.instance.update_dimensions(o)
-
-        return model.ObjVal
+            return model.ObjVal
+        else:
+            print(f"Model could not be solved! Gurobi terminated with status code {model.Status} "
+                  f"(see https://www.gurobi.com/documentation/current/refman/optimization_status_codes.html#sec"
+                  f":StatusCodes)")
+            exit()

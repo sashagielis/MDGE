@@ -19,7 +19,8 @@ ipe_instances = [
         # 'Many collisions',
         # 'Test',
         # 'Test DT flips',
-        # 'Larger instance'
+        'Larger instance',
+        'Test 2'
     ]
 
 
