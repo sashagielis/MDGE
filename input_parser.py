@@ -108,10 +108,12 @@ def read_ipe_instance(instance):
             if edge.path[0] == vertex:
                 edge.v1 = vertex
                 edge.path[0] = vertex
+                vertex.radius = edge.thickness / 2
 
             if edge.path[-1] == vertex:
                 edge.v2 = vertex
                 edge.path[-1] = vertex
+                vertex.radius = edge.thickness / 2
 
     graph = Graph(vertices, edges)
 

@@ -60,7 +60,8 @@ class ObstacleDisplacer:
         Computes the cost of the objective to be minimized.
         """
         if self.objective == Objective.MAX:
-            return max(distance(obstacle, obstacle.original_position) for obstacle in self.instance.obstacles)
+            return max([distance(obstacle, obstacle.original_position) for obstacle in self.instance.obstacles],
+                       default=0)
         elif self.objective == Objective.TOTAL:
             return sum(distance(obstacle, obstacle.original_position) for obstacle in self.instance.obstacles)
         else:
@@ -85,6 +86,9 @@ class ObstacleDisplacer:
             self.instance.homotopy.update_bbox_points()
 
             # While there are non-Delaunay triangles in the DT, flip the problematic half-edges
+            # This works as expected if the DT is still a valid triangulation after displacing the obstacles
+            # The orthogonality constraints of the linear program often make sure that this is the case
+            # Especially Delaunay edges 'moving over' points may lead to unexpected behavior
             while not self.instance.homotopy.dt.is_valid():
                 for t in self.instance.homotopy.dt.triangles:
                     delaunay, he = t.is_delaunay()

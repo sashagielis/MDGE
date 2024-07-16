@@ -132,14 +132,22 @@ class GrowingAlgorithm:
             if merge_event is not None:
                 self.queue.put(merge_event)
 
-    def compute_thick_edges(self):
+    def compute_thick_edges(self, print_events=False):
         """
         Computes the thick homotopic edges.
         Follows growing algorithm by Duncan et al. (https://doi.org/10.1142/S0129054106004315).
+
+        :param print_events: whether the executed events should be printed
         """
         # Initialize the event queue
         for eb in self.crs.elbow_bundles:
             self.update_queue(eb, 0)
+
+        if print_events:
+            if self.queue.empty():
+                print("No growing events")
+            else:
+                print("Growing events:")
 
         while not self.queue.empty():
             event = self.queue.get()
@@ -154,7 +162,8 @@ class GrowingAlgorithm:
                 # Continue with the next event
                 continue
 
-            print(event)
+            if print_events:
+                print(event)
 
             # Execute the event
             if type(event) == SplitEvent:

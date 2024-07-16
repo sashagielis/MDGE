@@ -103,12 +103,13 @@ class SimplifiedInstance(Instance):
         super().__init__(instance_name, **kwargs)
         self.homotopy = Homotopy(self)
 
-    def solve(self, objective, displacement_method):
+    def solve(self, objective, displacement_method, print_grow_events=False):
         """
         Solves the instance.
 
         :param displacement_method: a Displacer object specifying the ObstacleDisplacer to displace the obstacles
         :param objective: an Objective object specifying the objective function to be minimized
+        :param print_grow_events: whether the events of the growing algorithm should be printed
         """
         # Compute shortest homotopic edges
         self.homotopy.compute_shortest_edges()
@@ -128,7 +129,7 @@ class SimplifiedInstance(Instance):
 
         # Compute thick homotopic edges using growing algorithm
         growing_algo = GrowingAlgorithm(self, 0.1)
-        growing_algo.compute_thick_edges()
+        growing_algo.compute_thick_edges(print_events=print_grow_events)
 
 
 class GeneralInstance(Instance):

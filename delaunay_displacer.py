@@ -11,6 +11,7 @@ from utils import vector_length
 approx_factor = 2
 
 
+# noinspection PyArgumentList
 class DelaunayDisplacer(ObstacleDisplacer):
     """
     A displacement method that computes a 2√2-approximation of the obstacle positions.
@@ -97,11 +98,11 @@ class DelaunayDisplacer(ObstacleDisplacer):
             o = self.instance.obstacles[i]
 
             # Create variables for new x- and y-coordinates of the obstacle
-            new_xs.append(model.addVar(lb=-gp.GRB.INFINITY, name=f"x(o'_{i})"))
-            new_ys.append(model.addVar(lb=-gp.GRB.INFINITY, name=f"y(o'_{i})"))
+            new_xs.append(model.addVar(lb=-gp.GRB.INFINITY))
+            new_ys.append(model.addVar(lb=-gp.GRB.INFINITY))
 
             # Add variable equal to displacement δ_i
-            displacements.append(model.addVar(name=f"δ(o_{i}, o'_{i})"))
+            displacements.append(model.addVar())
 
             dx = new_xs[i] - float(o.x)
             dy = new_ys[i] - float(o.y)
@@ -116,10 +117,10 @@ class DelaunayDisplacer(ObstacleDisplacer):
 
         # Add variable equal to objective to be minimized
         if self.objective == Objective.MAX:
-            obj = model.addVar(name="max displacement")
+            obj = model.addVar()
             model.addConstr(obj == gp.max_(displacements))
         elif self.objective == Objective.TOTAL:
-            obj = model.addVar(name="total displacement")
+            obj = model.addVar()
             model.addConstr(obj == gp.quicksum(displacements))
         else:
             raise Exception(f"Objective {self.objective.name} not implemented for DelaunayDisplacer")
@@ -137,8 +138,6 @@ class DelaunayDisplacer(ObstacleDisplacer):
                 y1 = new_ys[i]
                 x2 = new_xs[j]
                 y2 = new_ys[j]
-
-                var_name = f"δ(o'_{i}, o'_{j})"
             else:
                 i = constraint.p1.id
                 v = constraint.p2
@@ -147,8 +146,6 @@ class DelaunayDisplacer(ObstacleDisplacer):
                 y1 = new_ys[i]
                 x2 = v.x
                 y2 = v.y
-
-                var_name = f"δ(o'_{i}, v_{v.id})"
 
             # Compute dx and dy
             dx = x1 - x2
@@ -165,7 +162,7 @@ class DelaunayDisplacer(ObstacleDisplacer):
 
                 model.addConstr(dist == x_normalized * dx + y_normalized * dy)
 
-            separation = model.addVar(name=var_name)
+            separation = model.addVar()
             model.addGenConstrMax(separation, c_distances)
 
             # Add minimum-separation constraint on the pair of points

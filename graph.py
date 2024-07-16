@@ -22,7 +22,7 @@ class Edge:
         self.path = path
         self.weight = weight
         self.color = color
-        self.thickness = 1
+        self.thickness = weight
 
         self.crossing_sequence = None  # The reduced crossing sequence of the edge through the Delaunay triangulation
         self.elbow_bundle_v1 = None  # The terminal elbow bundle for v1

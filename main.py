@@ -4,23 +4,17 @@ from visualizer import visualize
 
 # IPE instances
 ipe_instances = [
-        # 'One line small',
-        # 'One line large',
-        # 'Curve edge case',
-        # 'Two lines edge case',
-        # 'simplified_instance_from_report',
-        # 'Test shortest homotopic edges',
-        # 'Test straight line homotopy',
+        'One path small',
+        'One path large',
+        'Test shortest homotopic edges',
+        'Test split event',
+        # 'Test merge event',
+        'Test growing events small',
+        'Test growing events large',
+        'Collinear points',
+        'Collinear points 2',
+        'Collinear points 3',
         'Simplified single paths',
-        # 'Collinear straights',
-        # 'Collinear straights 2',
-        # 'Collinear straights 3',
-        # 'Collinear straights 4',
-        # 'Many collisions',
-        # 'Test',
-        # 'Test DT flips',
-        'Larger instance',
-        'Test 2'
     ]
 
 
@@ -28,33 +22,33 @@ def main():
     ipe_plot_folder = "plots/simplified/ipe"
 
     for instance_name in ipe_instances:
-        print(f"Instance: {instance_name}")
-
         file = f"instances/simplified/ipe/{instance_name}.ipe"
         instance = SimplifiedInstance(instance_name, file=file)
-        # print(instance)
 
         instance_folder = f"{ipe_plot_folder}/{instance_name}"
 
         # Visualize input
-        visualize(instance, instance_folder, instance_name, False, True, True)
+        visualize(instance, instance_folder, instance_name, False, False, False)
 
-        # Set edge thicknesses
-        for edge in instance.graph.edges:
-            edge.thickness = edge.weight
-
-            edge.v1.radius = edge.thickness / 2
-            edge.v2.radius = edge.thickness / 2
-
+        # Set objective and displacement method
         objective = Objective.MAX
         displacement_method = Displacer.DELAUNAY
-        instance.solve(objective, displacement_method)
-        # print(instance)
+
+        # Print info
+        dashed_line = "-" * 100
+        print(f"\n{dashed_line}")
+        print(f"Instance: {instance_name}")
+        print(f"Objective: minimize {objective.name} displacement")
+        print(f"Displacement method: {displacement_method.name}")
+        print(f"{dashed_line}")
+
+        # Solve instance
+        instance.solve(objective, displacement_method, True)
 
         # Visualize solution
         solution_folder = f"{instance_folder}/solutions"
         solution_filename = f"{instance_name} - {objective.name} - {displacement_method.name}"
-        visualize(instance, solution_folder, solution_filename, True, True, False)
+        visualize(instance, solution_folder, solution_filename, True, False, False)
 
 
 if __name__ == "__main__":
