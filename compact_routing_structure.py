@@ -714,6 +714,7 @@ class CompactRoutingStructure:
 
         # Set properties of eb
         eb.point = x.point
+        eb.point.elbow_bundles.append(eb)
         eb.left = sb
         eb.right = sb2
         eb.inner = x
@@ -795,6 +796,7 @@ class CompactRoutingStructure:
 
         # Delete eb and sb2
         self.elbow_bundles.remove(eb)
+        eb.point.elbow_bundles.remove(eb)
         self.straight_bundles.remove(sb2)
 
         return sb1
@@ -896,6 +898,7 @@ class CompactRoutingStructure:
 
             # Remove the degenerate elbow bundle y
             self.elbow_bundles.remove(y)
+            x.point.elbow_bundles.remove(y)
 
     def divide(self, sb, eb):
         """
@@ -959,6 +962,7 @@ class CompactRoutingStructure:
                 # Therefore, we create a new elbow bundle eb_new which will form the remaining elbow bundle
                 eb_new = copy.copy(eb_next)
                 self.elbow_bundles.append(eb_new)
+                eb_new.point.elbow_bundles.append(eb_new)
 
                 eb_next.inner = eb_new
 
@@ -1007,6 +1011,7 @@ class CompactRoutingStructure:
                 # Therefore, we create a new elbow bundle eb_new which will form the remaining elbow bundle
                 eb_new = copy.copy(eb_next)
                 self.elbow_bundles.append(eb_new)
+                eb_new.point.elbow_bundles.append(eb_new)
 
                 eb_next.inner = eb_new
 
@@ -1071,6 +1076,7 @@ class CompactRoutingStructure:
             # Construct a new elbow bundle that will be inner of eb_left
             eb_inner = copy.copy(eb_left)
             self.elbow_bundles.append(eb_inner)
+            eb_inner.point.elbow_bundles.append(eb_inner)
 
             # Set the sizes of eb_left and eb_inner
             eb_left.size = 1
@@ -1103,6 +1109,7 @@ class CompactRoutingStructure:
                 # Construct a new elbow bundle that will be inner of eb_right
                 eb_inner = copy.copy(eb_right)
                 self.elbow_bundles.append(eb_inner)
+                eb_inner.point.elbow_bundles.append(eb_inner)
 
                 # Set the sizes of eb_right and eb_inner
                 eb_right.size = 1
@@ -1132,6 +1139,7 @@ class CompactRoutingStructure:
                 # Construct a new elbow bundle that will be inner of eb_right
                 eb_inner = copy.copy(eb_right)
                 self.elbow_bundles.append(eb_inner)
+                eb_inner.point.elbow_bundles.append(eb_inner)
 
                 # Set the sizes of eb_inner and eb_right
                 eb_inner.size = 1
