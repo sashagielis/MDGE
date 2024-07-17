@@ -433,6 +433,9 @@ class ElbowBundle:
         sb_left = self.left
         sb_right = self.right
 
+        if not sb_left.is_connected_to(self) or not sb_right.is_connected_to(self):
+            return False
+
         # Check whether the elbow bundle is no longer a right bend using the backbones of the adjacent straight bundles
         p1, p2 = sb_left.get_backbone_endpoints(t)
         p3, p4 = sb_right.get_backbone_endpoints(t)

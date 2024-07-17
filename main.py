@@ -8,7 +8,7 @@ ipe_instances = [
         'One path large',
         'Test shortest homotopic edges',
         'Test split event',
-        # 'Test merge event',
+        'Test merge event',
         'Test growing events small',
         'Test growing events large',
         'Collinear points',
@@ -28,7 +28,7 @@ def main():
         instance_folder = f"{ipe_plot_folder}/{instance_name}"
 
         # Visualize input
-        visualize(instance, instance_folder, instance_name, False, False, False)
+        visualize(instance, instance_folder, instance_name, False, True, False)
 
         # Set objective and displacement method
         objective = Objective.MAX

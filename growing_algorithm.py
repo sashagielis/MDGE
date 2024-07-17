@@ -87,7 +87,7 @@ class GrowingAlgorithm:
             first_t = next_split_time
             for bundle in next_split_bundles:
                 # Use binary search to approximate the exact split time
-                new_t = binary_search(next_split_time, 100, b.splits, bundle)
+                new_t = binary_search(next_split_time, 30, b.splits, bundle)
 
                 if new_t <= first_t:
                     first_t = new_t
@@ -113,7 +113,7 @@ class GrowingAlgorithm:
             while current_t <= 1:
                 if b.merges(current_t):
                     # Use binary search to approximate the exact merge time
-                    next_merge_time = binary_search(current_t, 100, b.merges)
+                    next_merge_time = binary_search(current_t, 30, b.merges)
 
                     return MergeEvent(next_merge_time, b)
 
