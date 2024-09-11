@@ -5,16 +5,16 @@ from visualizer import visualize
 # IPE instances
 ipe_instances = [
         'One path small',
-        'One path large',
-        'Test shortest homotopic edges',
-        'Test split event',
-        'Test merge event',
-        'Test growing events small',
-        'Test growing events large',
-        'Collinear points',
-        'Collinear points 2',
-        'Collinear points 3',
-        'Simplified single paths',
+        # 'One path large',
+        # 'Test shortest homotopic edges',
+        # 'Test split event',
+        # 'Test merge event',
+        # 'Test growing events small',
+        # 'Test growing events large',
+        # 'Collinear points',
+        # 'Collinear points 2',
+        # 'Collinear points 3',
+        # 'Simplified single paths',
     ]
 
 
