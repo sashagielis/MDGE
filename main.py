@@ -3,29 +3,28 @@ from obstacle_displacer import Displacer, Objective
 from visualizer import visualize
 
 # IPE instances
-ipe_instances = [
+instances = [
         'One path small',
-        # 'One path large',
-        # 'Test shortest homotopic edges',
-        # 'Test split event',
-        # 'Test merge event',
-        # 'Test growing events small',
-        # 'Test growing events large',
-        # 'Collinear points',
-        # 'Collinear points 2',
-        # 'Collinear points 3',
-        # 'Simplified single paths',
+        'One path large',
+        'Test shortest homotopic edges',
+        'Test split event',
+        'Test merge event',
+        'Test growing events small',
+        'Test growing events large',
+        'Collinear points',
+        'Collinear points 2',
+        'Collinear points 3',
+        'Simplified single paths',
     ]
 
 
 def main():
-    ipe_plot_folder = "plots/simplified/ipe"
-
-    for instance_name in ipe_instances:
-        file = f"instances/simplified/ipe/{instance_name}.ipe"
+    plot_folder = "plots"
+    for instance_name in instances:
+        file = f"instances/{instance_name}.ipe"
         instance = SimplifiedInstance(instance_name, file=file)
 
-        instance_folder = f"{ipe_plot_folder}/{instance_name}"
+        instance_folder = f"{plot_folder}/{instance_name}"
 
         # Visualize input
         visualize(instance, instance_folder, instance_name, False, True, False)
@@ -46,9 +45,8 @@ def main():
         instance.solve(objective, displacement_method, True)
 
         # Visualize solution
-        solution_folder = f"{instance_folder}/solutions"
         solution_filename = f"{instance_name} - {objective.name} - {displacement_method.name}"
-        visualize(instance, solution_folder, solution_filename, True, False, False)
+        visualize(instance, instance_folder, solution_filename, True, False, False)
 
 
 if __name__ == "__main__":
