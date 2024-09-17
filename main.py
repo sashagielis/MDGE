@@ -30,7 +30,7 @@ def main():
         visualize(instance, instance_folder, instance_name, False, True, False)
 
         # Set objective and displacement method
-        objective = Objective.MAX
+        objective = Objective.TOTAL
         displacement_method = Displacer.DELAUNAY
 
         # Print info

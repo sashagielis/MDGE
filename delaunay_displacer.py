@@ -1,4 +1,5 @@
 import copy
+import math
 from fractions import Fraction
 import gurobipy as gp
 
@@ -8,13 +9,12 @@ from obstacle_displacer import Objective, ObstacleDisplacer
 from point import Point
 from utils import vector_length
 
-approx_factor = 2
+approx_factor = 1.998
 
 
-# noinspection PyArgumentList
 class DelaunayDisplacer(ObstacleDisplacer):
     """
-    A displacement method that computes a 2√2-approximation of the obstacle positions.
+    A displacement method that computes a 1.998√2-approximation of the obstacle positions.
     """
     def __init__(self, instance, objective):
         """
@@ -23,10 +23,10 @@ class DelaunayDisplacer(ObstacleDisplacer):
         """
         super().__init__(instance, objective)
 
-    def compute_constraints(self):
+    def compute_constraints(self, keep_prev_constraints):
         """
         Computes the minimum-separation constraints on the Delaunay edges.
-        By increasing the constraints by a factor 2, there is guaranteed to be enough space between all pairs of points.
+        We increase the constraints by a factor 1.998 to ensure there is enough space between all pairs of points.
         """
         # Remove existing constraints on the half-edges
         for he in self.instance.homotopy.dt.half_edges:
@@ -34,7 +34,10 @@ class DelaunayDisplacer(ObstacleDisplacer):
 
         # Initialize the constraints
         half_edges = copy.copy(self.instance.homotopy.dt.half_edges)
-        self.constraints = []
+
+        if not keep_prev_constraints:
+            self.constraints = []
+
         while half_edges:
             he = half_edges.pop()
 
@@ -46,7 +49,7 @@ class DelaunayDisplacer(ObstacleDisplacer):
             if isinstance(he.origin, Vertex) and isinstance(he.target, Vertex):
                 continue
 
-            # Check if already added the constraint
+            # Check if we already added the constraint
             if he.constraint is not None:
                 continue
 
@@ -89,9 +92,11 @@ class DelaunayDisplacer(ObstacleDisplacer):
 
         model = gp.Model("Delaunay displacer", env=env)
 
-        # C_δ contains for each edge of the unit circle of δ, the point closest to the origin
+        # C_δ contains for each side of the unit circle of δ, the point closest to the origin
+        # We use δ = L_∞ (maximum metric)
         C_delta = [Point(-1, 0), Point(0, 1), Point(1, 0), Point(0, -1)]
 
+        # Add constraints to compute values of displacements
         new_xs, new_ys = [], []
         displacements = []
         for i in range(len(self.instance.obstacles)):
@@ -115,20 +120,7 @@ class DelaunayDisplacer(ObstacleDisplacer):
 
                 model.addConstr(displacements[i] >= x_normalized * dx + y_normalized * dy)
 
-        # Add variable equal to objective to be minimized
-        if self.objective == Objective.MAX:
-            obj = model.addVar()
-            model.addConstr(obj == gp.max_(displacements))
-        elif self.objective == Objective.TOTAL:
-            obj = model.addVar()
-            model.addConstr(obj == gp.quicksum(displacements))
-        else:
-            raise Exception(f"Objective {self.objective.name} not implemented for DelaunayDisplacer")
-
-        # Set objective
-        model.setObjective(obj, gp.GRB.MINIMIZE)
-
-        # Add constraints to model
+        # Add constraints on pairs of points
         for constraint in self.constraints:
             if type(constraint) == ObstaclePairConstraint:
                 i = constraint.p1.id
@@ -147,53 +139,42 @@ class DelaunayDisplacer(ObstacleDisplacer):
                 x2 = v.x
                 y2 = v.y
 
-            # Compute dx and dy
-            dx = x1 - x2
-            dy = y1 - y2
-
-            # Compute distance δ between the pair of points using C_δ
-            c_distances = []
-            for c in C_delta:
-                x_normalized = c.x / (vector_length(c) ** 2)
-                y_normalized = c.y / (vector_length(c) ** 2)
-
-                dist = model.addVar(lb=-gp.GRB.INFINITY)
-                c_distances.append(dist)
-
-                model.addConstr(dist == x_normalized * dx + y_normalized * dy)
-
-            separation = model.addVar()
-            model.addGenConstrMax(separation, c_distances)
-
-            # Add minimum-separation constraint on the pair of points
-            model.addConstr(separation >= constraint.min_separation)
-
             # Add orthogonality constraint on the x-coordinates
             if constraint.p1.x == constraint.p2.x:
                 model.addConstr(x1 == x2)
+                dx = 0
             elif constraint.p1.x < constraint.p2.x:
                 model.addConstr(x1 <= x2 - 1)
+                dx = x2 - x1
             else:
                 model.addConstr(x1 >= x2 + 1)
+                dx = x1 - x2
 
             # Add orthogonality constraint on the y-coordinates
             if constraint.p1.y == constraint.p2.y:
                 model.addConstr(y1 == y2)
+                dy = 0
             elif constraint.p1.y < constraint.p2.y:
                 model.addConstr(y1 <= y2 - 1)
+                dy = y2 - y1
             else:
                 model.addConstr(y1 >= y2 + 1)
+                dy = y1 - y2
 
-            # Add disjointness constraints on the pair of points
-            x_diff = model.addVar(lb=-gp.GRB.INFINITY)
-            y_diff = model.addVar(lb=-gp.GRB.INFINITY)
-            abs_x_diff = model.addVar()
-            abs_y_diff = model.addVar()
-            model.addConstr(x_diff == dx)
-            model.addConstr(y_diff == dy)
-            model.addConstr(abs_x_diff == gp.abs_(x_diff))
-            model.addConstr(abs_y_diff == gp.abs_(y_diff))
-            model.addConstr(abs_x_diff + abs_y_diff >= 1)
+            # Add minimum-separation constraint using the Manhattan distance
+            # The Manhattan distance overestimates the Euclidean distance by a factor √2
+            # Therefore, we need to scale the min separation by an extra factor √2, on top of the 1.998 approx factor
+            model.addConstr(dx + dy >= math.sqrt(2) * constraint.min_separation)
+
+        # Add variable equal to objective to be minimized
+        if self.objective == Objective.TOTAL:
+            obj = model.addVar()
+            model.addConstr(obj == gp.quicksum(displacements))
+        else:
+            raise Exception(f"Objective {self.objective.name} not implemented for DelaunayDisplacer")
+
+        # Set objective
+        model.setObjective(obj, gp.GRB.MINIMIZE)
 
         # Apply optimization to compute new obstacle positions
         model.optimize()

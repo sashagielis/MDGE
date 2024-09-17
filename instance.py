@@ -121,6 +121,7 @@ class SimplifiedInstance(Instance):
             raise Exception(f"Displacement method {displacement_method.name} not implemented")
 
         # Displace obstacles
+        print("Displacing the obstacles...")
         displacement_cost = displacer.execute()
         print(f"Displacement cost = {displacement_cost}")
 
@@ -128,6 +129,7 @@ class SimplifiedInstance(Instance):
         self.homotopy.compute_shortest_edges(use_existing_crossing_sequences=True)
 
         # Compute thick homotopic edges using growing algorithm
+        print("\nGrowing thick edges...")
         growing_algo = GrowingAlgorithm(self, 0.1)
         growing_algo.compute_thick_edges(print_events=print_grow_events)
 

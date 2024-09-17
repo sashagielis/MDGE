@@ -31,10 +31,12 @@ class ObstacleDisplacer:
         self.objective = objective
         self.constraints = []
 
-    def compute_constraints(self):
+    def compute_constraints(self, keep_prev_constraints):
         """
         Computes the minimum separation constraints that the solution should satisfy.
         Displacers should implement this method.
+
+        :param keep_prev_constraints: whether previous constraints should be kept
         """
         raise Exception(f"Method compute_constraints not implemented for {type(self).__name__}")
 
@@ -71,10 +73,16 @@ class ObstacleDisplacer:
         """
         Executes the displacement method.
         """
-        # Compute minimum-separation constraints
-        self.compute_constraints()
+        keep_prev_constraints = True
 
+        # Compute minimum-separation constraints
+        self.compute_constraints(keep_prev_constraints)
+
+        iteration = 0
         while not self.is_valid_solution():
+            iteration += 1
+            print(f"   Iteration {iteration}: {len(self.constraints)} constraints")
+
             # Displace the obstacles
             self.displace_obstacles()
 
@@ -100,7 +108,7 @@ class ObstacleDisplacer:
                             edge.crossing_sequence.update(he)
 
             # Recompute constraints
-            self.compute_constraints()
+            self.compute_constraints(keep_prev_constraints)
 
         # Return displacement cost
         return self.compute_cost()

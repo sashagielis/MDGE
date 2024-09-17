@@ -8,6 +8,21 @@ from obstacle import *
 from utils import transform_point
 
 
+def color_to_rgb(color):
+    """
+    Parses an IPE color.
+
+    :param color: a color name or RGB values specified as "R G B" where each value is divided by 255
+    :returns: the color name as string or a tuple with the RGB values of the color
+    """
+    color_list = color.split()
+
+    if len(color_list) == 1:
+        return color
+    else:
+        return tuple(int(float(c) * 255) for c in color_list)
+
+
 def read_ipe_instance(instance):
     """
     Reads an MDGD instance from an IPE file.
@@ -49,6 +64,9 @@ def read_ipe_instance(instance):
         else:
             transformation = [1, 0, 0, 1, 0, 0]
 
+        # Parse the stroke color
+        stroke_color = color_to_rgb(obj.get('stroke'))
+
         match obj.tag:
             case 'use':
                 # The object is a mark
@@ -62,11 +80,11 @@ def read_ipe_instance(instance):
 
                 if current_layer == 'graph':
                     # The mark is a vertex
-                    vertex = Vertex(point.x, point.y, obj.get('stroke'))
+                    vertex = Vertex(point.x, point.y, stroke_color)
                     vertices.append(vertex)
                 else:
                     # The mark is a point obstacle
-                    obstacle = PointObstacle(point, obj.get('stroke'))
+                    obstacle = PointObstacle(point, stroke_color)
                     obstacles.append(obstacle)
 
             case 'path':
@@ -90,15 +108,18 @@ def read_ipe_instance(instance):
                     else:
                         weight = 1
 
-                    edge = Edge(path, weight, obj.get('stroke'))
+                    edge = Edge(path, weight, stroke_color)
                     edges.append(edge)
                 else:
+                    # Parse the fill color
+                    fill_color = color_to_rgb(obj.get('fill'))
+
                     # The path is a polygonal obstacle
                     if len(path) == 1:
-                        obstacle = PointObstacle(path[0], obj.get('fill'))
+                        obstacle = PointObstacle(path[0], fill_color)
                     else:
                         path = path[:-1]
-                        obstacle = PolygonalObstacle(path, obj.get('fill'), obj.get('stroke'))
+                        obstacle = PolygonalObstacle(path, fill_color, stroke_color)
 
                     obstacles.append(obstacle)
 

@@ -163,7 +163,7 @@ class GrowingAlgorithm:
                 continue
 
             if print_events:
-                print(event)
+                print(f"   {event}")
 
             # Execute the event
             if type(event) == SplitEvent:
