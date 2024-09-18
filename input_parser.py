@@ -7,16 +7,35 @@ from graph import *
 from obstacle import *
 from utils import transform_point
 
+# Mapping from the colors of the MDGE IPE color stylesheet to their RGB values
+mdge_ipe_color_stylesheet = {
+    "MDGE lightblue": (141, 211, 199),
+    "MDGE yellow": (255, 255, 179),
+    "MDGE violet": (190, 186, 218),
+    "MDGE red": (251, 128, 114),
+    "MDGE blue": (128, 177, 211),
+    "MDGE orange": (253, 180, 98),
+    "MDGE green": (179, 222, 105),
+    "MDGE pink": (252, 205, 229),
+    "MDGE gray": (217, 217, 217),
+    "MDGE purple": (188, 128, 189)
+}
 
-def parse_color(color):
+
+def parse_ipe_color(color):
     """
     Parses an IPE color.
 
     :param color: a color name or RGB values specified as "R G B" where each value is divided by 255
     :returns: the color name as string or a tuple with the RGB values of the color
     """
+    # Check if the color is from the MDGE IPE color stylesheet
+    if color in mdge_ipe_color_stylesheet:
+        return mdge_ipe_color_stylesheet[color]
+
     color_list = color.split()
 
+    # Check if the color is specified as its name or as RGB values
     if len(color_list) == 1:
         return color
     else:
@@ -65,7 +84,7 @@ def read_ipe_instance(instance):
             transformation = [1, 0, 0, 1, 0, 0]
 
         # Parse the stroke color
-        stroke_color = parse_color(obj.get('stroke'))
+        stroke_color = parse_ipe_color(obj.get('stroke'))
 
         match obj.tag:
             case 'use':
@@ -112,7 +131,7 @@ def read_ipe_instance(instance):
                     edges.append(edge)
                 else:
                     # Parse the fill color
-                    fill_color = parse_color(obj.get('fill'))
+                    fill_color = parse_ipe_color(obj.get('fill'))
 
                     # The path is a polygonal obstacle
                     if len(path) == 1:

@@ -18,7 +18,8 @@ test_instances = [
 ]
 
 report_instances = [
-    'Problem definition',
+    # 'Simplified single paths',
+    'Stress test'
 ]
 
 

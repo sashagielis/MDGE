@@ -1,5 +1,6 @@
 import math
 import os
+import time
 
 from delaunay_displacer import DelaunayDisplacer
 from growing_algorithm import GrowingAlgorithm
@@ -111,6 +112,8 @@ class SimplifiedInstance(Instance):
         :param objective: an Objective object specifying the objective function to be minimized
         :param print_grow_events: whether the events of the growing algorithm should be printed
         """
+        start_time_algorithm = time.time()
+
         # Compute shortest homotopic edges
         self.homotopy.compute_shortest_edges()
 
@@ -122,7 +125,9 @@ class SimplifiedInstance(Instance):
 
         # Displace obstacles
         print("Displacing the obstacles...")
+        start_time_displacement = time.time()
         displacement_cost = displacer.execute()
+        end_time_displacement = time.time()
         print(f"Displacement cost = {displacement_cost}")
 
         # Recompute shortest homotopic edges using updated crossing sequences
@@ -130,8 +135,16 @@ class SimplifiedInstance(Instance):
 
         # Compute thick homotopic edges using growing algorithm
         print("\nGrowing thick edges...")
+        start_time_growing = time.time()
         growing_algo = GrowingAlgorithm(self, 0.1)
         growing_algo.compute_thick_edges(print_events=print_grow_events)
+        end_time_growing = time.time()
+
+        end_time_algorithm = time.time()
+
+        print(f"\nDisplacement time: {end_time_displacement - start_time_displacement} seconds")
+        print(f"Growing time: {end_time_growing - start_time_growing} seconds")
+        print(f"Total algorithm time: {end_time_algorithm - start_time_algorithm} seconds")
 
 
 class GeneralInstance(Instance):

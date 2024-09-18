@@ -117,7 +117,7 @@ def visualize(instance, folder, filename, thick_edges=True, show_axes=False, sho
     # Draw obstacles
     for obstacle in instance.obstacles:
         if type(obstacle) == PointObstacle:
-            plot.circle(float(obstacle.x), float(obstacle.y), color=obstacle.fill_color)
+            plot.circle(float(obstacle.x), float(obstacle.y), radius=0.5, line_color='black', fill_color=obstacle.fill_color)
         else:
             path = obstacle.path
             xs = [float(p.x) for p in path]
