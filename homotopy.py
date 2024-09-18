@@ -493,8 +493,8 @@ class Homotopy:
     def compute_shortest_edges(self, use_existing_crossing_sequences=False):
         """
         Computes the shortest homotopic edges.
-        Follows algorithm by Hershberger and Snoeyink (https://doi.org/10.1016/0925-7721(94)90010-8).
-        More detailed explanation: https://jeffe.cs.illinois.edu/teaching/compgeom/notes/05-shortest-homotopic.pdf.
+        Follows algorithm by Lee and Preparata (https://doi.org/10.1002/net.3230140304).
+        Detailed explanation: https://jeffe.cs.illinois.edu/teaching/compgeom/notes/05-shortest-homotopic.pdf.
         """
         for edge in self.instance.graph.edges:
             if not use_existing_crossing_sequences:

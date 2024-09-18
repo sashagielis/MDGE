@@ -18,7 +18,7 @@ test_instances = [
 ]
 
 report_instances = [
-    # 'Simplified single paths',
+    'Basic instance',
     'Stress test'
 ]
 
