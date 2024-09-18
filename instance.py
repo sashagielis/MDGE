@@ -11,7 +11,7 @@ from obstacle_displacer import Displacer
 
 class Instance:
     """
-    An instance of the MDGD problem.
+    An instance of the MDGE problem.
     """
     def __init__(self, instance_name, **kwargs):
         """
@@ -97,7 +97,7 @@ class Instance:
 
 class SimplifiedInstance(Instance):
     """
-    An instance of the simplified MDGD problem.
+    An instance of the simplified MDGE problem.
     """
     def __init__(self, instance_name, **kwargs):
         super().__init__(instance_name, **kwargs)
@@ -136,7 +136,7 @@ class SimplifiedInstance(Instance):
 
 class GeneralInstance(Instance):
     """
-    An instance of the general MDGD problem.
+    An instance of the general MDGE problem.
     """
     def __init__(self, instance_name, **kwargs):
         super().__init__(instance_name, **kwargs)

@@ -8,7 +8,7 @@ from obstacle import *
 from utils import transform_point
 
 
-def color_to_rgb(color):
+def parse_color(color):
     """
     Parses an IPE color.
 
@@ -25,7 +25,7 @@ def color_to_rgb(color):
 
 def read_ipe_instance(instance):
     """
-    Reads an MDGD instance from an IPE file.
+    Reads an MDGE instance from an IPE file.
 
     :param instance: an IPE file consisting of a single page with the following layers:
     - 'graph': containing vertices (marks [M]) and edges (polylines [P])
@@ -65,7 +65,7 @@ def read_ipe_instance(instance):
             transformation = [1, 0, 0, 1, 0, 0]
 
         # Parse the stroke color
-        stroke_color = color_to_rgb(obj.get('stroke'))
+        stroke_color = parse_color(obj.get('stroke'))
 
         match obj.tag:
             case 'use':
@@ -112,7 +112,7 @@ def read_ipe_instance(instance):
                     edges.append(edge)
                 else:
                     # Parse the fill color
-                    fill_color = color_to_rgb(obj.get('fill'))
+                    fill_color = parse_color(obj.get('fill'))
 
                     # The path is a polygonal obstacle
                     if len(path) == 1:
@@ -135,6 +135,9 @@ def read_ipe_instance(instance):
                 edge.v2 = vertex
                 edge.path[-1] = vertex
                 vertex.radius = edge.thickness / 2
+
+        if edge.v1 is None or edge.v2 is None or edge.v1 == edge.v2:
+            edges.remove(edge)
 
     graph = Graph(vertices, edges)
 
