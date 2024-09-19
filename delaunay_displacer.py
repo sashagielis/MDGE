@@ -81,9 +81,9 @@ class DelaunayDisplacer(ObstacleDisplacer):
     def displace_obstacles(self):
         """
         Displaces the obstacles by optimizing a linear program under DT-approximated minimum-separation constraints.
-        Inspiration: https://doi.org/10.1111/cgf.13722.
+        Follows algorithm by Meulemans: https://doi.org/10.1111/cgf.13722.
 
-        :returns: the final value of the approximated objective function
+        :returns: the final value of the approximated objective function, or None if no solution was found
         """
         # Create environment to suppress all Gurobi output
         env = gp.Env(empty=True)
@@ -192,4 +192,5 @@ class DelaunayDisplacer(ObstacleDisplacer):
             print(f"Model could not be solved! Gurobi terminated with status code {model.Status} "
                   f"(see https://www.gurobi.com/documentation/current/refman/optimization_status_codes.html#sec"
                   f":StatusCodes)")
-            exit()
+
+            return None

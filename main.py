@@ -18,19 +18,30 @@ test_instances = [
 ]
 
 report_instances = [
-    'Basic instance',
-    'Stress test'
+    # 'Basic instance',
+    # 'Feasible solution',
+    'Infeasible solution',
+    'Running time test - 100 obstacles',
+    # 'Running time test - 200 obstacles',
 ]
 
 
-def solve_instance(instance_name, instance_type):
+def solve_instance(instance_name, instance_type, number_of_runs=1, print_run_info=False):
+    """
+    Solves the given instance.
+
+    :param instance_name: the name of the instance
+    :param instance_type: the type of the instance ("test" or "report")
+    :param number_of_runs: the number of times the instance should be run
+    :param print_run_info: whether the info while running the algorithm should be printed
+    """
     file = f"instances/{instance_type}/{instance_name}.ipe"
     instance = SimplifiedInstance(instance_name, file=file)
 
     plot_folder = f"plots/{instance_type}/{instance_name}"
 
     # Visualize input
-    visualize(instance, plot_folder, instance_name, False, True, False)
+    visualize(instance, plot_folder, instance_name, False, False, False)
 
     # Set objective and displacement method
     objective = Objective.TOTAL
@@ -45,7 +56,24 @@ def solve_instance(instance_name, instance_type):
     print(f"{dashed_line}")
 
     # Solve instance
-    instance.solve(objective, displacement_method, True)
+    print(f"Number of runs: {number_of_runs}")
+    total_displacement_time, total_growing_time, total_algorithm_time = 0, 0, 0
+    for i in range(number_of_runs):
+        instance = SimplifiedInstance(instance_name, file=file)
+        timings = instance.solve(objective, displacement_method, print_run_info)
+
+        # If no solution was found, return
+        if timings is None:
+            return
+
+        total_displacement_time += timings[0]
+        total_growing_time += timings[1]
+        total_algorithm_time += timings[2]
+
+    # Print timings
+    print(f"\nAverage displacement time: {total_displacement_time / number_of_runs} seconds")
+    print(f"Average growing time: {total_growing_time / number_of_runs} seconds")
+    print(f"Average algorithm time: {total_algorithm_time / number_of_runs} seconds")
 
     # Visualize solution
     solution_filename = f"{instance_name} - {objective.name} - {displacement_method.name}"
@@ -57,7 +85,7 @@ def main():
         solve_instance(instance_name, "test")
 
     for instance_name in report_instances:
-        solve_instance(instance_name, "report")
+        solve_instance(instance_name, "report", 1, True)
 
 
 if __name__ == "__main__":

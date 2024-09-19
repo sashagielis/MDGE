@@ -104,13 +104,14 @@ class SimplifiedInstance(Instance):
         super().__init__(instance_name, **kwargs)
         self.homotopy = Homotopy(self)
 
-    def solve(self, objective, displacement_method, print_grow_events=False):
+    def solve(self, objective, displacement_method, print_info=False):
         """
         Solves the instance.
 
         :param displacement_method: a Displacer object specifying the ObstacleDisplacer to displace the obstacles
         :param objective: an Objective object specifying the objective function to be minimized
-        :param print_grow_events: whether the events of the growing algorithm should be printed
+        :param print_info: whether the displacement and growing info should be printed
+        :returns: the displacement time, growing time and total algorithm time, or None if no solution was found
         """
         start_time_algorithm = time.time()
 
@@ -123,28 +124,40 @@ class SimplifiedInstance(Instance):
         else:
             raise Exception(f"Displacement method {displacement_method.name} not implemented")
 
+        if print_info:
+            print("\nDisplacing the obstacles...")
+
         # Displace obstacles
-        print("Displacing the obstacles...")
         start_time_displacement = time.time()
-        displacement_cost = displacer.execute()
+        displacement_cost = displacer.execute(print_info)
         end_time_displacement = time.time()
-        print(f"Displacement cost = {displacement_cost}")
+
+        if displacement_cost is None:
+            return None
+
+        if print_info:
+            print(f"Displacement cost = {displacement_cost}")
 
         # Recompute shortest homotopic edges using updated crossing sequences
         self.homotopy.compute_shortest_edges(use_existing_crossing_sequences=True)
 
+        if print_info:
+            print("\nGrowing thick edges...")
+
         # Compute thick homotopic edges using growing algorithm
-        print("\nGrowing thick edges...")
         start_time_growing = time.time()
         growing_algo = GrowingAlgorithm(self, 0.1)
-        growing_algo.compute_thick_edges(print_events=print_grow_events)
+        growing_algo.compute_thick_edges(print_events=print_info)
         end_time_growing = time.time()
 
         end_time_algorithm = time.time()
 
-        print(f"\nDisplacement time: {end_time_displacement - start_time_displacement} seconds")
-        print(f"Growing time: {end_time_growing - start_time_growing} seconds")
-        print(f"Total algorithm time: {end_time_algorithm - start_time_algorithm} seconds")
+        # Compute timings
+        displacement_time = end_time_displacement - start_time_displacement
+        growing_time = end_time_growing - start_time_growing
+        algorithm_time = end_time_algorithm - start_time_algorithm
+
+        return displacement_time, growing_time, algorithm_time
 
 
 class GeneralInstance(Instance):

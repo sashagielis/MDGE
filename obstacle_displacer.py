@@ -69,9 +69,12 @@ class ObstacleDisplacer:
         else:
             return None
 
-    def execute(self):
+    def execute(self, print_info):
         """
         Executes the displacement method.
+
+        :param print_info: whether the displacement info should be printed
+        :returns: the displacement cost, or None if no solution was found
         """
         keep_prev_constraints = True
 
@@ -81,10 +84,15 @@ class ObstacleDisplacer:
         iteration = 0
         while not self.is_valid_solution():
             iteration += 1
-            print(f"   Iteration {iteration}: {len(self.constraints)} constraints")
+
+            if print_info:
+                print(f"   Iteration {iteration}: {len(self.constraints)} constraints")
 
             # Displace the obstacles
-            self.displace_obstacles()
+            sol = self.displace_obstacles()
+
+            if sol is None:
+                return None
 
             # Update the dimensions of the instance
             for o in self.instance.obstacles:

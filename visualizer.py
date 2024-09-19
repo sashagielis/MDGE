@@ -10,9 +10,9 @@ from pathlib import Path
 from compact_routing_structure import StraightBundle
 from obstacle import PointObstacle
 
-# Minimum visible point diameter and edge width
+# Minimum point diameter and edge width
 min_point_radius = 0.5
-min_edge_width = 1
+min_edge_width = 2
 t = 1
 
 
@@ -117,7 +117,7 @@ def visualize(instance, folder, filename, thick_edges=True, show_axes=False, sho
     # Draw obstacles
     for obstacle in instance.obstacles:
         if type(obstacle) == PointObstacle:
-            plot.circle(float(obstacle.x), float(obstacle.y), radius=0.5, line_color='black', fill_color=obstacle.fill_color)
+            plot.circle(float(obstacle.x), float(obstacle.y), radius=min_point_radius, line_color='black', fill_color=obstacle.fill_color)
         else:
             path = obstacle.path
             xs = [float(p.x) for p in path]
