@@ -22,13 +22,15 @@ class ObstacleDisplacer:
     """
     A displacement method to solve a set of minimum-separation constraints on the obstacles.
     """
-    def __init__(self, instance, objective):
+    def __init__(self, instance, objective, displace_vertices=False):
         """
         :param instance: a SimplifiedInstance object
         :param objective: an Objective object
+        :param displace_vertices: whether the vertices may be displaced
         """
         self.instance = instance
         self.objective = objective
+        self.displace_vertices = displace_vertices
         self.constraints = []
 
     def compute_constraints(self, keep_prev_constraints=True):
@@ -61,11 +63,12 @@ class ObstacleDisplacer:
         """
         Computes the cost of the objective to be minimized.
         """
+        points = self.instance.obstacles + self.instance.graph.vertices
+
         if self.objective == Objective.MAX:
-            return max([distance(obstacle, obstacle.original_position) for obstacle in self.instance.obstacles],
-                       default=0)
+            return max([distance(p, p.original_position) for p in points], default=0)
         elif self.objective == Objective.TOTAL:
-            return sum(distance(obstacle, obstacle.original_position) for obstacle in self.instance.obstacles)
+            return sum(distance(p, p.original_position) for p in points)
         else:
             return None
 
@@ -96,6 +99,9 @@ class ObstacleDisplacer:
             # Update the dimensions of the instance
             for o in self.instance.obstacles:
                 self.instance.update_dimensions(o)
+            if self.displace_vertices:
+                for v in self.instance.graph.vertices:
+                    self.instance.update_dimensions(v)
 
             # Update the bounding box points of the DT, which may no longer be valid after displacing the obstacles
             self.instance.homotopy.update_bbox_points()

@@ -3,7 +3,7 @@ import math
 from fractions import Fraction
 import gurobipy as gp
 
-from constraint import ObstaclePairConstraint, ObstacleVertexConstraint
+from constraint import Constraint
 from graph import Vertex
 from obstacle_displacer import Objective, ObstacleDisplacer
 from point import Point
@@ -17,12 +17,8 @@ class DelaunayDisplacer(ObstacleDisplacer):
     """
     A displacement method that computes a 1.998√2-approximation of the new optimal obstacle positions.
     """
-    def __init__(self, instance, objective):
-        """
-        :param instance: a SimplifiedInstance object
-        :param objective: an Objective object
-        """
-        super().__init__(instance, objective)
+    def __init__(self, instance, objective, displace_vertices=False):
+        super().__init__(instance, objective, displace_vertices)
 
         self.model = None
         self.new_xs, self.new_ys = [], []
@@ -43,21 +39,30 @@ class DelaunayDisplacer(ObstacleDisplacer):
         # We use δ = L_∞ (maximum metric)
         C_delta = [Point(-1, 0), Point(0, 1), Point(1, 0), Point(0, -1)]
 
-        # Add constraints to compute values of displacements
+        # Determine the set of points to be displaced
+        if self.displace_vertices:
+            displaced_points = self.instance.obstacles + self.instance.graph.vertices
+        else:
+            displaced_points = self.instance.obstacles
+
         self.new_xs, self.new_ys = [], []
         displacements = []
-        for i in range(len(self.instance.obstacles)):
-            o = self.instance.obstacles[i]
 
-            # Create variables for new x- and y-coordinates of the obstacle
-            self.new_xs.append(self.model.addVar(lb=-gp.GRB.INFINITY))
-            self.new_ys.append(self.model.addVar(lb=-gp.GRB.INFINITY))
+        # Add constraints to compute values of displacements
+        for p in displaced_points:
+            # Create variables for new x- and y-coordinates of the point
+            new_x = self.model.addVar(lb=-gp.GRB.INFINITY)
+            new_y = self.model.addVar(lb=-gp.GRB.INFINITY)
+            self.new_xs.append(new_x)
+            self.new_ys.append(new_y)
 
             # Add variable equal to displacement δ_i
-            displacements.append(self.model.addVar())
+            displacement = self.model.addVar()
+            displacements.append(displacement)
 
-            dx = self.new_xs[i] - float(o.x)
-            dy = self.new_ys[i] - float(o.y)
+            # Compute x- and y-difference
+            dx = new_x - float(p.x)
+            dy = new_y - float(p.y)
 
             # Add constraints such that δ_i >= c * (o'_i - o_i) / ||c||^2 for all c in C_δ
             # Since δ_i is equal to the max over these values and we minimize in the objective, δ_i is equal to the max
@@ -65,7 +70,7 @@ class DelaunayDisplacer(ObstacleDisplacer):
                 x_normalized = c.x / (vector_length(c) ** 2)
                 y_normalized = c.y / (vector_length(c) ** 2)
 
-                self.model.addConstr(displacements[i] >= x_normalized * dx + y_normalized * dy)
+                self.model.addConstr(displacement >= x_normalized * dx + y_normalized * dy)
 
         # Add variable equal to objective to be minimized
         if self.objective == Objective.TOTAL:
@@ -104,20 +109,17 @@ class DelaunayDisplacer(ObstacleDisplacer):
             if he.origin in self.instance.homotopy.bbox_points or he.target in self.instance.homotopy.bbox_points:
                 continue
 
-            # Do not add constraints on pairs of vertices
-            if isinstance(he.origin, Vertex) and isinstance(he.target, Vertex):
+            # Do not add constraints on pairs of vertices if them may not be displaced
+            if not self.displace_vertices and isinstance(he.origin, Vertex) and isinstance(he.target, Vertex):
                 continue
 
-            # Construct an obstacle-vertex or obstacle-pair constraint
+            # Construct minimum-separation constraint
+            min_sep = 0
             if isinstance(he.origin, Vertex):
-                min_sep = approx_factor * he.origin.radius
-                con = ObstacleVertexConstraint(he.target, he.origin, min_sep)
-            elif isinstance(he.target, Vertex):
-                min_sep = approx_factor * he.target.radius
-                con = ObstacleVertexConstraint(he.origin, he.target, min_sep)
-            else:
-                min_sep = 0
-                con = ObstaclePairConstraint(he.origin, he.target, min_sep)
+                min_sep += approx_factor * he.origin.radius
+            if isinstance(he.target, Vertex):
+                min_sep += approx_factor * he.target.radius
+            con = Constraint(he.origin, he.target, min_sep)
 
             # Set the constraint on the half-edge and its twin
             he.constraint = con
@@ -142,23 +144,33 @@ class DelaunayDisplacer(ObstacleDisplacer):
 
         :param constraint: a Constraint object
         """
-        # Retrieve variables for new obstacle position(s)
-        if type(constraint) == ObstaclePairConstraint:
-            i = constraint.p1.id
-            j = constraint.p2.id
-
+        # Retrieve variables for new position of p1
+        i = constraint.p1.id
+        if isinstance(constraint.p1, Vertex):
+            if self.displace_vertices:
+                i += len(self.instance.obstacles)
+                x1 = self.new_xs[i]
+                y1 = self.new_ys[i]
+            else:
+                x1 = constraint.p1.x
+                y1 = constraint.p1.y
+        else:
             x1 = self.new_xs[i]
             y1 = self.new_ys[i]
+
+        # Retrieve variables for new position of p2
+        j = constraint.p2.id
+        if isinstance(constraint.p2, Vertex):
+            if self.displace_vertices:
+                j += len(self.instance.obstacles)
+                x2 = self.new_xs[j]
+                y2 = self.new_ys[j]
+            else:
+                x2 = constraint.p2.x
+                y2 = constraint.p2.y
+        else:
             x2 = self.new_xs[j]
             y2 = self.new_ys[j]
-        else:
-            i = constraint.p1.id
-            v = constraint.p2
-
-            x1 = self.new_xs[i]
-            y1 = self.new_ys[i]
-            x2 = v.x
-            y2 = v.y
 
         # Add orthogonality constraint on the x-coordinates
         if constraint.p1.x == constraint.p2.x:
@@ -199,11 +211,21 @@ class DelaunayDisplacer(ObstacleDisplacer):
 
         if self.model.Status == gp.GRB.OPTIMAL:
             # The model was solved optimally
+
             # Assign computed positions to obstacles
             for i in range(len(self.instance.obstacles)):
                 o = self.instance.obstacles[i]
                 o.x = Fraction(self.new_xs[i].X)
                 o.y = Fraction(self.new_ys[i].X)
+
+            if self.displace_vertices:
+                # Assign computed positions to vertices
+                for i in range(len(self.instance.graph.vertices)):
+                    index = i + len(self.instance.obstacles)
+
+                    v = self.instance.graph.vertices[i]
+                    v.x = Fraction(self.new_xs[index].X)
+                    v.y = Fraction(self.new_ys[index].X)
 
             return self.model.ObjVal
         else:

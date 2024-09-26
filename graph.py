@@ -12,6 +12,7 @@ class Vertex(Point):
         self.color = color
         self.radius = 0.5
 
+        self.original_position = Point(x, y)
         self.elbow_bundles = []  # List of elbow bundles associated with the vertex, i.e., bending around it
 
 

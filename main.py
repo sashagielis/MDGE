@@ -32,12 +32,13 @@ experimental_instances = [
 ]
 
 
-def solve_instance(instance_name, instance_type, number_of_runs=1, print_run_info=False):
+def solve_instance(instance_name, instance_type, displace_vertices=False, number_of_runs=1, print_run_info=False):
     """
     Solves the given instance.
 
     :param instance_name: the name of the instance
     :param instance_type: the type of the instance ("test" or "experiment")
+    :param displace_vertices: whether the vertices may be displaced
     :param number_of_runs: the number of times the instance should be run
     :param print_run_info: whether the info while running the algorithm should be printed
     """
@@ -60,6 +61,7 @@ def solve_instance(instance_name, instance_type, number_of_runs=1, print_run_inf
     print(f"Info: |V| = {len(instance.graph.vertices)}, |E| = {len(instance.graph.edges)}, |O| = {len(instance.obstacles)}")
     print(f"Objective: minimize {objective.name} displacement")
     print(f"Displacement method: {displacement_method.name}")
+    print(f"Displace vertices: {displace_vertices}")
     print(f"{dashed_line}")
 
     # Solve instance
@@ -67,7 +69,7 @@ def solve_instance(instance_name, instance_type, number_of_runs=1, print_run_inf
     total_displacement_time, total_growing_time, total_algorithm_time = 0, 0, 0
     for i in range(number_of_runs):
         instance = SimplifiedInstance(instance_name, file=file)
-        timings = instance.solve(objective, displacement_method, print_run_info)
+        timings = instance.solve(objective, displacement_method, displace_vertices, print_run_info)
 
         # If no solution was found, return
         if timings is None:
@@ -92,7 +94,7 @@ def main():
         solve_instance(instance, "test")
 
     for instance in experimental_instances:
-        solve_instance(instance, "experiment", 1, True)
+        solve_instance(instance, "experiment", True, 1, True)
 
 
 if __name__ == "__main__":

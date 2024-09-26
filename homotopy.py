@@ -176,6 +176,9 @@ class CrossingSequence:
                 check_quadrilateral()
                 i += 1
 
+        # Reduce the crossing sequence to remove unnecessary crossings
+        self.reduce()
+
     def __str__(self):
         i = 1
         result = ""

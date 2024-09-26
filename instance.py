@@ -104,12 +104,13 @@ class SimplifiedInstance(Instance):
         super().__init__(instance_name, **kwargs)
         self.homotopy = Homotopy(self)
 
-    def solve(self, objective, displacement_method, print_info=False):
+    def solve(self, objective, displacement_method, displace_vertices=False, print_info=False):
         """
         Solves the instance.
 
         :param displacement_method: a Displacer object specifying the ObstacleDisplacer to displace the obstacles
         :param objective: an Objective object specifying the objective function to be minimized
+        :param displace_vertices: whether the vertices may be displaced
         :param print_info: whether the displacement and growing info should be printed
         :returns: the displacement time, growing time and total algorithm time, or None if no solution was found
         """
@@ -120,7 +121,7 @@ class SimplifiedInstance(Instance):
 
         # Choose ObstacleDisplacer
         if displacement_method == Displacer.DELAUNAY:
-            displacer = DelaunayDisplacer(self, objective)
+            displacer = DelaunayDisplacer(self, objective, displace_vertices)
         else:
             raise Exception(f"Displacement method {displacement_method.name} not implemented")
 
