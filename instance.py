@@ -129,7 +129,7 @@ class SimplifiedInstance(Instance):
 
         # Displace obstacles
         start_time_displacement = time.time()
-        displacement_cost = displacer.execute(print_info)
+        displacement_cost = displacer.execute(keep_prev_constraints=True, print_info=print_info)
         end_time_displacement = time.time()
 
         if displacement_cost is None:

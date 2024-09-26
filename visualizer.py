@@ -2,6 +2,7 @@ import os
 
 from bokeh.embed import file_html
 from bokeh.layouts import gridplot
+from bokeh.models import Arrow, NormalHead
 from bokeh.plotting import figure
 from bokeh.resources import CDN
 from html2image import Html2Image
@@ -9,14 +10,16 @@ from pathlib import Path
 
 from compact_routing_structure import StraightBundle
 from obstacle import PointObstacle
+from utils import vector_length
 
-# Minimum point diameter and edge width
-min_point_radius = 0.5
-min_edge_width = 2
-t = 1
+point_radius = 2  # The radius of an input vertex/obstacle
+thin_edge_width = 8  # The width of a thin edge
+arrow_head_size = 15  # The size of the heads of the displacement arrows in pixels
+t = 1  # The event time of the growing algorithm
 
 
-def visualize(instance, folder, filename, thick_edges=True, show_axes=False, show_delaunay=False):
+def visualize(instance, folder, filename, thick_edges=False, show_axes=False, show_delaunay=False,
+              show_displacement=False):
     """
     Visualizes the given instance.
 
@@ -26,6 +29,7 @@ def visualize(instance, folder, filename, thick_edges=True, show_axes=False, sho
     :param thick_edges: whether the instance should be drawn with thick edges
     :param show_axes: whether the axes of the plot should be drawn
     :param show_delaunay: whether the Delaunay triangulation on the vertices and obstacles should be drawn
+    :param show_displacement: whether the displacement of the obstacles should be indicated using arrows
     """
     plot = figure(match_aspect=True)
 
@@ -112,12 +116,29 @@ def visualize(instance, folder, filename, thick_edges=True, show_axes=False, sho
             ys = [float(p.y) for p in path]
 
             # Draw thin edge
-            plot.line(xs, ys, line_width=min_edge_width, color=edge.color)
+            plot.line(xs, ys, line_width=thin_edge_width, color=edge.color)
 
     # Draw obstacles
     for obstacle in instance.obstacles:
         if type(obstacle) == PointObstacle:
-            plot.circle(float(obstacle.x), float(obstacle.y), radius=min_point_radius, line_color='black', fill_color=obstacle.fill_color)
+            plot.circle(float(obstacle.x), float(obstacle.y), radius=point_radius, line_color='black',
+                        fill_color=obstacle.fill_color)
+
+            if show_displacement and obstacle.original_position != obstacle:
+                old_x = float(obstacle.original_position.x)
+                old_y = float(obstacle.original_position.y)
+
+                # Compute end of arrow such that it is attached to the boundary of the obstacle
+                vec = obstacle - obstacle.original_position
+                dist = vector_length(vec)
+                unit_vec = vec / dist
+                arrow_end = obstacle.original_position + unit_vec * (dist - point_radius)
+
+                arrow_head = NormalHead(size=arrow_head_size)
+
+                plot.add_layout(Arrow(end=arrow_head, line_width=1, line_dash=[15, 5],
+                                      x_start=old_x, y_start=old_y, x_end=float(arrow_end.x), y_end=float(arrow_end.y)))
+
         else:
             path = obstacle.path
             xs = [float(p.x) for p in path]
@@ -126,7 +147,7 @@ def visualize(instance, folder, filename, thick_edges=True, show_axes=False, sho
 
     # Draw vertices
     for vertex in instance.graph.vertices:
-        radius = t * vertex.radius if thick_edges else min_point_radius
+        radius = t * vertex.radius if thick_edges else point_radius
         plot.circle(float(vertex.x), float(vertex.y), radius=radius, color=vertex.color)
 
     if show_delaunay:

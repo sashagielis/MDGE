@@ -92,6 +92,10 @@ class HalfEdge:
         t1.half_edges = [self, self.next, self.prev]
         t2.half_edges = [self.twin, self.twin.next, self.twin.prev]
 
+        # Reset the minimum-separation constraint on the flipped half-edge and its twin
+        self.constraint = None
+        self.twin.constraint = None
+
     def __eq__(self, other):
         if self is None or other is None:
             return False

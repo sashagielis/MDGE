@@ -17,12 +17,18 @@ test_instances = [
     # 'Simplified single paths',
 ]
 
-report_instances = [
-    # 'Basic instance',
-    # 'Feasible solution',
-    'Infeasible solution',
-    'Running time test - 100 obstacles',
-    # 'Running time test - 200 obstacles',
+experimental_instances = [
+    # 'Feasible',
+    # 'Infeasible',
+    # 'Instance 1',
+    'Instance 2',
+    # 'Instance 3',
+    # 'Instance 4',
+    # 'Instance 5',
+    # 'Polygonal obstacles 1',
+    # 'Polygonal obstacles 2',
+    # 'Running time test - 1000 obstacles',
+    # 'Weird displacement',
 ]
 
 
@@ -31,7 +37,7 @@ def solve_instance(instance_name, instance_type, number_of_runs=1, print_run_inf
     Solves the given instance.
 
     :param instance_name: the name of the instance
-    :param instance_type: the type of the instance ("test" or "report")
+    :param instance_type: the type of the instance ("test" or "experiment")
     :param number_of_runs: the number of times the instance should be run
     :param print_run_info: whether the info while running the algorithm should be printed
     """
@@ -41,7 +47,7 @@ def solve_instance(instance_name, instance_type, number_of_runs=1, print_run_inf
     plot_folder = f"plots/{instance_type}/{instance_name}"
 
     # Visualize input
-    visualize(instance, plot_folder, instance_name, False, False, False)
+    visualize(instance, plot_folder, instance_name, False, False, False, False)
 
     # Set objective and displacement method
     objective = Objective.TOTAL
@@ -51,6 +57,7 @@ def solve_instance(instance_name, instance_type, number_of_runs=1, print_run_inf
     dashed_line = "-" * 100
     print(f"\n{dashed_line}")
     print(f"Instance: {instance_name}")
+    print(f"Info: |V| = {len(instance.graph.vertices)}, |E| = {len(instance.graph.edges)}, |O| = {len(instance.obstacles)}")
     print(f"Objective: minimize {objective.name} displacement")
     print(f"Displacement method: {displacement_method.name}")
     print(f"{dashed_line}")
@@ -77,15 +84,15 @@ def solve_instance(instance_name, instance_type, number_of_runs=1, print_run_inf
 
     # Visualize solution
     solution_filename = f"{instance_name} - {objective.name} - {displacement_method.name}"
-    visualize(instance, plot_folder, solution_filename, True, False, False)
+    visualize(instance, plot_folder, solution_filename, True, False, False, True)
 
 
 def main():
-    for instance_name in test_instances:
-        solve_instance(instance_name, "test")
+    for instance in test_instances:
+        solve_instance(instance, "test")
 
-    for instance_name in report_instances:
-        solve_instance(instance_name, "report", 1, True)
+    for instance in experimental_instances:
+        solve_instance(instance, "experiment", 1, True)
 
 
 if __name__ == "__main__":

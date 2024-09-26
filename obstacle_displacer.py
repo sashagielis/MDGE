@@ -31,18 +31,18 @@ class ObstacleDisplacer:
         self.objective = objective
         self.constraints = []
 
-    def compute_constraints(self, keep_prev_constraints):
+    def compute_constraints(self, keep_prev_constraints=True):
         """
-        Computes the minimum separation constraints that the solution should satisfy.
+        Computes the minimum-separation constraints that the solution should satisfy.
         Displacers should implement this method.
 
-        :param keep_prev_constraints: whether previous constraints should be kept
+        :param keep_prev_constraints: whether the previous constraints should be kept
         """
         raise Exception(f"Method compute_constraints not implemented for {type(self).__name__}")
 
     def displace_obstacles(self):
         """
-        Computes new obstacle positions by minimizing objective subject to minimum separation constraints.
+        Computes new obstacle positions by minimizing objective subject to minimum-separation constraints.
         Displacers should implement this method.
         """
         raise Exception(f"Method displace_obstacles not implemented for {type(self).__name__}")
@@ -69,15 +69,14 @@ class ObstacleDisplacer:
         else:
             return None
 
-    def execute(self, print_info):
+    def execute(self, keep_prev_constraints=True, print_info=False):
         """
         Executes the displacement method.
 
+        :param keep_prev_constraints: whether the minimum-separation constraints should be kept across iterations
         :param print_info: whether the displacement info should be printed
         :returns: the displacement cost, or None if no solution was found
         """
-        keep_prev_constraints = True
-
         # Compute minimum-separation constraints
         self.compute_constraints(keep_prev_constraints)
 

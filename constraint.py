@@ -3,7 +3,7 @@ from utils import distance
 
 class Constraint:
     """
-    A minimum separation constraint on two points.
+    A minimum-separation constraint on two points.
     """
     def __init__(self, p1, p2, min_sep):
         """

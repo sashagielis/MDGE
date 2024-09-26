@@ -48,7 +48,7 @@ def read_ipe_instance(instance):
 
     :param instance: an IPE file consisting of a single page with the following layers:
     - 'graph': containing vertices (marks [M]) and edges (polylines [P])
-    - 'obstacles': containing point obstacles (marks [M]) and/or polygonal obstacles (polylines [P])
+    - 'obstacles': containing point obstacles (marks [M] or circles [O]) and/or polygonal obstacles (polylines [P])
     :returns: a Graph object, a list of Obstacle objects and the x- and y-ranges of the instance
     """
     # Initialize Vertex and Obstacle id counters
@@ -133,7 +133,7 @@ def read_ipe_instance(instance):
                     # Parse the fill color
                     fill_color = parse_ipe_color(obj.get('fill'))
 
-                    # The path is a polygonal obstacle
+                    # The path is an obstacle
                     if len(path) == 1:
                         obstacle = PointObstacle(path[0], fill_color)
                     else:
