@@ -9,6 +9,7 @@ from html2image import Html2Image
 from pathlib import Path
 
 from compact_routing_structure import StraightBundle
+from graph import Vertex
 from obstacle import PointObstacle
 from utils import vector_length
 
@@ -123,22 +124,6 @@ def visualize(instance, folder, filename, thick_edges=False, show_axes=False, sh
         if type(obstacle) == PointObstacle:
             plot.circle(float(obstacle.x), float(obstacle.y), radius=point_radius, line_color='black',
                         fill_color=obstacle.fill_color)
-
-            if show_displacement and obstacle.original_position != obstacle:
-                old_x = float(obstacle.original_position.x)
-                old_y = float(obstacle.original_position.y)
-
-                # Compute end of arrow such that it is attached to the boundary of the obstacle
-                vec = obstacle - obstacle.original_position
-                dist = vector_length(vec)
-                unit_vec = vec / dist
-                arrow_end = obstacle.original_position + unit_vec * (dist - point_radius)
-
-                arrow_head = NormalHead(size=arrow_head_size)
-
-                plot.add_layout(Arrow(end=arrow_head, line_width=1, line_dash=[15, 5],
-                                      x_start=old_x, y_start=old_y, x_end=float(arrow_end.x), y_end=float(arrow_end.y)))
-
         else:
             path = obstacle.path
             xs = [float(p.x) for p in path]
@@ -149,6 +134,27 @@ def visualize(instance, folder, filename, thick_edges=False, show_axes=False, sh
     for vertex in instance.graph.vertices:
         radius = t * vertex.radius if thick_edges else point_radius
         plot.circle(float(vertex.x), float(vertex.y), radius=radius, color=vertex.color)
+
+    if show_displacement:
+        # Draw displacement arrows
+        for point in instance.obstacles + instance.graph.vertices:
+            if point.original_position != point:
+                old_x = float(point.original_position.x)
+                old_y = float(point.original_position.y)
+
+                # Compute end of arrow such that it is attached to the boundary of the point
+                vec = point - point.original_position
+                dist = vector_length(vec)
+                unit_vec = vec / dist
+                if isinstance(point, Vertex):
+                    arrow_end = point.original_position + unit_vec * (dist - point.radius)
+                else:
+                    arrow_end = point.original_position + unit_vec * (dist - point_radius)
+
+                # Draw arrow
+                arrow_head = NormalHead(size=arrow_head_size)
+                plot.add_layout(Arrow(end=arrow_head, line_width=1, line_dash=[15, 5],
+                                      x_start=old_x, y_start=old_y, x_end=float(arrow_end.x), y_end=float(arrow_end.y)))
 
     if show_delaunay:
         # Draw Delaunay triangulation
