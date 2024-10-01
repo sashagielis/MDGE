@@ -1,1 +1,1 @@
-# Minimum Displacement Graph Embedding (MDGE) problem
+# Minimum Displacement Graph Embedding (MDGE)
