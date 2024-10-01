@@ -13,14 +13,14 @@ from graph import Vertex
 from obstacle import PointObstacle
 from utils import vector_length
 
-point_radius = 2  # The radius of an input vertex/obstacle
-thin_edge_width = 8  # The width of a thin edge
+point_radius = 2  # The radius of the input vertices/obstacles
+thin_edge_width = 8  # The width of the thin edges and displacement arrows
 arrow_head_size = 15  # The size of the heads of the displacement arrows in pixels
-t = 1  # The event time of the growing algorithm
+end_time = 1  # The final event time of the growing algorithm
 
 
 def visualize(instance, folder, filename, thick_edges=False, show_axes=False, show_delaunay=False,
-              show_displacement=False):
+              show_displacement=False, x_range=None, y_range=None):
     """
     Visualizes the given instance.
 
@@ -31,8 +31,13 @@ def visualize(instance, folder, filename, thick_edges=False, show_axes=False, sh
     :param show_axes: whether the axes of the plot should be drawn
     :param show_delaunay: whether the Delaunay triangulation on the vertices and obstacles should be drawn
     :param show_displacement: whether the displacement of the obstacles should be indicated using arrows
+    :param x_range: the x-range of the plot
+    :param y_range: the y-range of the plot
     """
-    plot = figure(match_aspect=True)
+    if x_range is None or y_range is None:
+        plot = figure(match_aspect=True)
+    else:
+        plot = figure(match_aspect=True, x_range=x_range, y_range=y_range)
 
     if show_axes:
         plot.axis.visible = True
@@ -57,7 +62,7 @@ def visualize(instance, folder, filename, thick_edges=False, show_axes=False, sh
             while not done:
                 if type(current_bundle) == StraightBundle:
                     # Set segment corners of straight
-                    segment_corners = current_bundle.get_corners(t)
+                    segment_corners = current_bundle.get_corners(end_time)
                     straight_xs.append([[[corner.x for corner in segment_corners]]])
                     straight_ys.append([[[corner.y for corner in segment_corners]]])
 
@@ -76,11 +81,11 @@ def visualize(instance, folder, filename, thick_edges=False, show_axes=False, sh
                     elbow_ys.append(float(current_bundle.point.y))
 
                     # Set radii of annular wedge
-                    inner_radii.append(t * current_bundle.layer_thickness)
-                    outer_radii.append(t * (current_bundle.layer_thickness + current_bundle.thickness))
+                    inner_radii.append(end_time * current_bundle.layer_thickness)
+                    outer_radii.append(end_time * (current_bundle.layer_thickness + current_bundle.thickness))
 
                     # Set angles of annular wedge
-                    a1, a2 = current_bundle.get_angles(t)
+                    a1, a2 = current_bundle.get_angles(end_time)
                     start_angles.append(float(a2))
                     end_angles.append(float(a1))
 
@@ -132,7 +137,7 @@ def visualize(instance, folder, filename, thick_edges=False, show_axes=False, sh
 
     # Draw vertices
     for vertex in instance.graph.vertices:
-        radius = t * vertex.radius if thick_edges else point_radius
+        radius = end_time * vertex.radius if thick_edges else point_radius
         plot.circle(float(vertex.x), float(vertex.y), radius=radius, color=vertex.color)
 
     if show_displacement:
@@ -153,8 +158,8 @@ def visualize(instance, folder, filename, thick_edges=False, show_axes=False, sh
 
                 # Draw arrow
                 arrow_head = NormalHead(size=arrow_head_size)
-                plot.add_layout(Arrow(end=arrow_head, line_width=1, line_dash=[15, 5],
-                                      x_start=old_x, y_start=old_y, x_end=float(arrow_end.x), y_end=float(arrow_end.y)))
+                plot.add_layout(Arrow(end=arrow_head, line_width=thin_edge_width, x_start=old_x, y_start=old_y,
+                                      x_end=float(arrow_end.x), y_end=float(arrow_end.y)))
 
     if show_delaunay:
         # Draw Delaunay triangulation

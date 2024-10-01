@@ -3,6 +3,8 @@ from queue import PriorityQueue
 from compact_routing_structure import CompactRoutingStructure, ElbowBundle, StraightBundle
 from event import MergeEvent, SplitEvent
 
+end_time = 1  # Should be 1, but may use other values for testing
+
 
 class GrowingAlgorithm:
     def __init__(self, instance, dt):
@@ -61,7 +63,7 @@ class GrowingAlgorithm:
             # Since we roughly approximate the time, there may be multiple bundles that split with b at the found time
             # Therefore, we first find all such bundles
             next_split_bundles = []
-            next_split_time = 1
+            next_split_time = end_time
             for bundle in split_bundles:
                 if b.is_connected_to(bundle):
                     continue
@@ -110,7 +112,7 @@ class GrowingAlgorithm:
             """
             # Grow time by dt until the next merge event of b is found
             current_t = t + self.dt
-            while current_t <= 1:
+            while current_t <= end_time:
                 if b.merges(current_t):
                     # Use binary search to approximate the exact merge time
                     next_merge_time = binary_search(current_t, 30, b.merges)

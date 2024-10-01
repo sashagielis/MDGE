@@ -21,7 +21,7 @@ experimental_instances = [
     # 'Feasible',
     # 'Infeasible',
     # 'Instance 1',
-    'Instance 2',
+    # 'Instance 2',
     # 'Instance 3',
     # 'Instance 4',
     # 'Instance 5',
@@ -32,7 +32,8 @@ experimental_instances = [
 ]
 
 
-def solve_instance(instance_name, instance_type, displace_vertices=False, number_of_runs=1, print_run_info=False):
+def solve_instance(instance_name, instance_type, displace_vertices=False, number_of_runs=1, print_run_info=False,
+                   x_range=None, y_range=None):
     """
     Solves the given instance.
 
@@ -41,6 +42,8 @@ def solve_instance(instance_name, instance_type, displace_vertices=False, number
     :param displace_vertices: whether the vertices may be displaced
     :param number_of_runs: the number of times the instance should be run
     :param print_run_info: whether the info while running the algorithm should be printed
+    :param x_range: the x-range of the plot
+    :param y_range: the y-range of the plot
     """
     file = f"instances/{instance_type}/{instance_name}.ipe"
     instance = SimplifiedInstance(instance_name, file=file)
@@ -58,7 +61,8 @@ def solve_instance(instance_name, instance_type, displace_vertices=False, number
     dashed_line = "-" * 100
     print(f"\n{dashed_line}")
     print(f"Instance: {instance_name}")
-    print(f"Info: |V| = {len(instance.graph.vertices)}, |E| = {len(instance.graph.edges)}, |O| = {len(instance.obstacles)}")
+    print(
+        f"Info: |V| = {len(instance.graph.vertices)}, |E| = {len(instance.graph.edges)}, |O| = {len(instance.obstacles)}")
     print(f"Objective: minimize {objective.name} displacement")
     print(f"Displacement method: {displacement_method.name}")
     print(f"Displace vertices: {displace_vertices}")
@@ -86,7 +90,7 @@ def solve_instance(instance_name, instance_type, displace_vertices=False, number
 
     # Visualize solution
     solution_filename = f"{instance_name} - {objective.name} - {displacement_method.name}"
-    visualize(instance, plot_folder, solution_filename, True, False, False, True)
+    visualize(instance, plot_folder, solution_filename, True, False, False, True, x_range, y_range)
 
 
 def main():
@@ -94,7 +98,11 @@ def main():
         solve_instance(instance, "test")
 
     for instance in experimental_instances:
-        solve_instance(instance, "experiment", True, 1, True)
+        solve_instance(instance, "experiment", False, 1, True)
+
+    # For figures of instance 2:
+    # Moving vertices: x_range=(-120, 720), y_range=(390, 860)
+    # Max thickness: x_range=(-160, 755), y_range=(375, 885)
 
 
 if __name__ == "__main__":
